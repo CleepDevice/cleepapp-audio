@@ -14,30 +14,37 @@ class TestAudio(unittest.TestCase):
 
     def setUp(self):
         self.session = session.TestSession()
-        logging.basicConfig(level=logging.CRITICAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
 
     def tearDown(self):
         self.session.clean()
 
-    def init_context(self, bootstrap={}):
+    def init_session(self, bootstrap={}):
+        # force cleep_filesystem
+        if 'cleep_filesystem' not in bootstrap:
+            cleep_filesystem = MagicMock()
+            cleep_filesystem.open.return_value.read.return_value = 'dtparam=audio=on'
+            bootstrap['cleep_filesystem'] = cleep_filesystem
+
         self.module = self.session.setup(Audio, bootstrap=bootstrap)
+        self.session.start_module(self.module)
 
     def test_init(self):
-        self.init_context()
+        self.init_session()
         self.assertIsNotNone(self.module.bcm2835_driver)
         self.assertTrue(isinstance(self.module.bcm2835_driver, Bcm2835AudioDriver))
 
     @patch('backend.audio.Tools')
     def test_init_no_audio_on_device(self, mock_tools):
         mock_tools.raspberry_pi_infos.return_value = { 'audio': False }
-        self.init_context()
+        self.init_session()
 
     def test_init_configured_driver_not_available(self):
         default_driver = Mock()
         default_driver.is_installed.return_value = False
         drivers_mock = Mock()
         drivers_mock.get_driver.side_effect = [None, default_driver]
-        self.init_context(bootstrap={
+        self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
 
@@ -48,7 +55,7 @@ class TestAudio(unittest.TestCase):
         default_driver.enable.return_value = False
         drivers_mock = Mock()
         drivers_mock.get_driver.side_effect = [None, default_driver]
-        self.init_context(bootstrap={
+        self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
 
@@ -57,12 +64,12 @@ class TestAudio(unittest.TestCase):
         default_driver.is_installed.return_value = True
         drivers_mock = Mock()
         drivers_mock.get_driver.return_value = None
-        self.init_context(bootstrap={
+        self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
 
     def test_get_module_config(self):
-        self.init_context()
+        self.init_session()
         conf = self.module.get_module_config()
         logging.debug('Conf: %s' % conf)
 
@@ -98,7 +105,7 @@ class TestAudio(unittest.TestCase):
         new_driver.is_card_enabled.return_value = True
         drivers_mock = Mock()
         drivers_mock.get_driver.side_effect = [old_driver, old_driver, new_driver]
-        self.init_context(bootstrap={
+        self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
         self.module._set_config_field = Mock()
@@ -121,7 +128,7 @@ class TestAudio(unittest.TestCase):
         new_driver.is_card_enabled.return_value = True
         drivers_mock = Mock()
         drivers_mock.get_driver.side_effect = [old_driver, old_driver, new_driver]
-        self.init_context(bootstrap={
+        self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
         self.module._set_config_field = Mock()
@@ -131,7 +138,7 @@ class TestAudio(unittest.TestCase):
         self.assertEqual(str(cm.exception), 'Unable to enable selected device')
 
     def test_select_device_invalid_parameters(self):
-        self.init_context()
+        self.init_session()
 
         with self.assertRaises(MissingParameter) as cm:
             self.module.select_device(None)
@@ -153,7 +160,7 @@ class TestAudio(unittest.TestCase):
         new_driver.is_card_enabled.return_value = True
         drivers_mock = Mock()
         drivers_mock.get_driver.side_effect = [old_driver, old_driver, None]
-        self.init_context(bootstrap={
+        self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
         self.module._set_config_field = Mock()
@@ -175,7 +182,7 @@ class TestAudio(unittest.TestCase):
         new_driver.is_card_enabled.return_value = True
         drivers_mock = Mock()
         drivers_mock.get_driver.side_effect = [old_driver, old_driver, new_driver]
-        self.init_context(bootstrap={
+        self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
         self.module._set_config_field = Mock()
@@ -189,7 +196,7 @@ class TestAudio(unittest.TestCase):
         driver.is_installed.return_value = True
         drivers_mock = Mock()
         drivers_mock.get_driver.return_value = driver
-        self.init_context(bootstrap={
+        self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
         self.module._get_config_field = Mock(return_value='dummydriver')
@@ -199,7 +206,7 @@ class TestAudio(unittest.TestCase):
         driver.set_volumes.assert_called_with(12, 34)
 
     def test_set_volumes_invalid_parameters(self):
-        self.init_context()
+        self.init_session()
 
         with self.assertRaises(InvalidParameter) as cm:
             self.module.set_volumes(None, 12)
@@ -219,7 +226,7 @@ class TestAudio(unittest.TestCase):
         driver.is_installed.return_value = True
         drivers_mock = Mock()
         drivers_mock.get_driver.return_value = None
-        self.init_context(bootstrap={
+        self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
         self.module._get_config_field = Mock(return_value=None)
@@ -233,7 +240,7 @@ class TestAudio(unittest.TestCase):
     def test_set_volumes_no_driver_found(self):
         drivers_mock = Mock()
         drivers_mock.get_driver.return_value = None
-        self.init_context(bootstrap={
+        self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
         self.module._get_config_field = Mock(return_value='dummydriver')
@@ -245,7 +252,7 @@ class TestAudio(unittest.TestCase):
 
     @patch('backend.audio.Alsa')
     def test_test_playing(self, mock_alsa):
-        self.init_context()
+        self.init_session()
         self.module.test_playing()
 
         time.sleep(1.0)
@@ -254,7 +261,7 @@ class TestAudio(unittest.TestCase):
     @patch('backend.audio.Alsa')
     def test_test_playing_failed(self, mock_alsa):
         mock_alsa.return_value.play_sound.return_value = False
-        self.init_context()
+        self.init_session()
         self.module.test_playing()
 
         time.sleep(1.0)
@@ -262,7 +269,7 @@ class TestAudio(unittest.TestCase):
 
     @patch('backend.audio.Alsa')
     def test_test_recording(self, mock_alsa):
-        self.init_context()
+        self.init_session()
         self.module.test_recording()
 
         self.assertTrue(mock_alsa.return_value.record_sound.called)
@@ -270,13 +277,13 @@ class TestAudio(unittest.TestCase):
     @patch('backend.audio.Alsa')
     def test_test_recording_failed(self, mock_alsa):
         mock_alsa.return_value.play_sound.return_value = False
-        self.init_context()
+        self.init_session()
         self.module.test_recording()
 
         self.assertTrue(mock_alsa.return_value.record_sound.called)
 
     def test_resource_acquired(self):
-        self.init_context()
+        self.init_session()
         self.module._resource_acquired('dummy.resource')
 
 
@@ -291,7 +298,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def init_context(self):
+    def init_session(self):
         self.fs = Mock()
         self.driver = Bcm2835AudioDriver(self.fs)
 
@@ -300,7 +307,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
     def test_install(self, mock_asound, mock_configtxt, mock_tools):
         mock_tools.raspberry_pi_infos.return_value = { 'audio': True }
-        self.init_context()
+        self.init_session()
         self.driver._install()
         self.assertTrue(mock_asound.return_value.delete.called)
         self.assertTrue(mock_configtxt.return_value.enable_audio.called)
@@ -311,7 +318,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     def test_install_enable_audio_failed(self, mock_asound, mock_configtxt, mock_tools):
         mock_tools.raspberry_pi_infos.return_value = { 'audio': True }
         mock_configtxt.return_value.enable_audio.return_value = False
-        self.init_context()
+        self.init_session()
 
         with self.assertRaises(Exception) as cm:
             self.driver._install()
@@ -321,7 +328,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.Tools')
     def test_install_with_no_audio_supported(self, mock_tools):
         mock_tools.raspberry_pi_infos.return_value = { 'audio': False }
-        self.init_context()
+        self.init_session()
 
         with self.assertRaises(Exception) as cm:
             self.driver._install()
@@ -331,7 +338,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.ConfigTxt')
     def test_uninstall(self, mock_configtxt, mock_tools):
         mock_tools.raspberry_pi_infos.return_value = { 'audio': True }
-        self.init_context()
+        self.init_session()
         self.driver._uninstall()
         self.assertTrue(mock_configtxt.return_value.disable_audio.called)
 
@@ -340,7 +347,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     def test_uninstall_disable_audio_failed(self, mock_configtxt, mock_tools):
         mock_tools.raspberry_pi_infos.return_value = { 'audio': True }
         mock_configtxt.return_value.disable_audio.return_value = False
-        self.init_context()
+        self.init_session()
 
         with self.assertRaises(Exception) as cm:
             self.driver._uninstall()
@@ -349,7 +356,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.Tools')
     def test_uninstall_with_no_audio_supported(self, mock_tools):
         mock_tools.raspberry_pi_infos.return_value = { 'audio': False }
-        self.init_context()
+        self.init_session()
 
         with self.assertRaises(Exception) as cm:
             self.driver._uninstall()
@@ -358,7 +365,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
     @patch('backend.bcm2835audiodriver.Alsa')
     def test_enable(self, mock_alsa, mock_asound):
-        self.init_context()
+        self.init_session()
         self.driver.get_cardid_deviceid = Mock(return_value=(0, 0))
     
         self.assertTrue(self.driver.enable())
@@ -371,7 +378,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
     @patch('backend.bcm2835audiodriver.Alsa')
     def test_enable_no_card_infos(self, mock_alsa, mock_asound):
-        self.init_context()
+        self.init_session()
         self.driver.get_cardid_deviceid = Mock(return_value=(None, None))
     
         self.assertFalse(self.driver.enable())
@@ -385,7 +392,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.Alsa')
     def test_enable_alsa_save_default_file_failed(self, mock_alsa, mock_asound):
         mock_asound.return_value.save_default_file.return_value = False
-        self.init_context()
+        self.init_session()
         self.driver.get_cardid_deviceid = Mock(return_value=(0, 0))
     
         self.assertFalse(self.driver.enable())
@@ -399,7 +406,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.Alsa')
     def test_enable_alsa_amixer_control_failed(self, mock_alsa, mock_asound):
         mock_alsa.return_value.amixer_control.return_value = False
-        self.init_context()
+        self.init_session()
         self.driver.get_cardid_deviceid = Mock(return_value=(0, 0))
     
         self.assertFalse(self.driver.enable())
@@ -412,7 +419,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
     @patch('backend.bcm2835audiodriver.Alsa')
     def test_disable(self, mock_alsa, mock_asound):
-        self.init_context()
+        self.init_session()
     
         self.assertTrue(self.driver.disable())
 
@@ -423,7 +430,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.Alsa')
     def test_disable_alsa_amixer_control_failed(self, mock_alsa, mock_asound):
         mock_alsa.return_value.amixer_control.return_value = False
-        self.init_context()
+        self.init_session()
     
         self.assertFalse(self.driver.disable())
 
@@ -434,7 +441,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.Alsa')
     def test_disable_asound_delete_failed(self, mock_alsa, mock_asound):
         mock_asound.return_value.delete.return_value = False
-        self.init_context()
+        self.init_session()
     
         self.assertFalse(self.driver.disable())
 
@@ -443,7 +450,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
 
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
     def test_is_enabled(self, mock_asound):
-        self.init_context()
+        self.init_session()
 
         self.driver.is_card_enabled = Mock(return_value=True)
         mock_asound.return_value.exists.return_value = True
@@ -459,7 +466,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
 
     @patch('backend.bcm2835audiodriver.Alsa')
     def test_get_volumes(self, mock_alsa):
-        self.init_context()
+        self.init_session()
 
         mock_alsa.return_value.get_volume.return_value = 66
         vols =  self.driver.get_volumes()
@@ -467,7 +474,7 @@ class TestBcm2835AudioDriver(unittest.TestCase):
 
     @patch('backend.bcm2835audiodriver.Alsa')
     def test_set_volumes(self, mock_alsa):
-        self.init_context()
+        self.init_session()
 
         mock_alsa.return_value.set_volume.return_value = 99
         vols = self.driver.set_volumes(playback=12, capture=34)

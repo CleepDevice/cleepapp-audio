@@ -2,7 +2,10 @@
  * Audio service
  * Handle audio module requests
  */
-var audioService = function($q, $rootScope, rpcService) {
+angular
+.module('Cleep')
+.service('audioService', ['$q', '$rootScope', 'rpcService',
+function($q, $rootScope, rpcService) {
     var self = this;
 
     self.setVolumes = function(playback, capture) {
@@ -23,8 +26,5 @@ var audioService = function($q, $rootScope, rpcService) {
         return rpcService.sendCommand('test_recording', 'audio', null, 10);
     };
 
-};
-    
-var Cleep = angular.module('Cleep');
-Cleep.service('audioService', ['$q', '$rootScope', 'rpcService', audioService]);
+}]);
 

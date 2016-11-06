@@ -1,8 +1,11 @@
 /**
- * Audio config directive
+ * Audio config component
  * Handle audio configuration
  */
-var audioConfigDirective = function($rootScope, toast, audioService, cleepService) {
+angular
+.module('Cleep')
+.directive('audioConfigComponent', ['$rootScope', 'toastService', 'audioService', 'cleepService',
+function($rootScope, toast, audioService, cleepService) {
 
     var audioController = function()
     {
@@ -16,8 +19,7 @@ var audioConfigDirective = function($rootScope, toast, audioService, cleepServic
         /**
          * Set volumes
          */
-        self.setVolumes = function()
-        {
+        self.setVolumes = function() {
             audioService.setVolumes(self.volumePlayback, self.volumeCapture)
                 .then(function(resp) {
                     self.volumePlayback = resp.data.playback;
@@ -30,8 +32,7 @@ var audioConfigDirective = function($rootScope, toast, audioService, cleepServic
         /**
          * Set device
          */
-        self.setDevice = function()
-        {
+        self.setDevice = function() {
             if( !self.currentDevice ) {
                 toast.info('Please select a device');
                 return;
@@ -50,8 +51,7 @@ var audioConfigDirective = function($rootScope, toast, audioService, cleepServic
         /**
          * Play test sound
          */
-        self.testPlaying = function()
-        {
+        self.testPlaying = function() {
             audioService.testPlaying()
                 .then(function() {
                     toast.success('You should have heard a sound');
@@ -61,8 +61,7 @@ var audioConfigDirective = function($rootScope, toast, audioService, cleepServic
         /**
          * Record voice and play it
          */
-        self.testRecording = function()
-        {
+        self.testRecording = function() {
             toast.loading('Recording 5 seconds...');
             audioService.testRecording()
                 .then(function() {
@@ -71,18 +70,15 @@ var audioConfigDirective = function($rootScope, toast, audioService, cleepServic
         };
 
         //set internal members according to received config
-        self.setConfig = function(config)
-        {
+        self.setConfig = function(config) {
             self.playbackDevices = config.devices.playback;
             self.captureDevices = config.devices.capture;
             self.volumePlayback = config.volumes.playback;
             self.volumeCapture = config.volumes.capture;
 
             //search for current device in playback devices list
-            for( var i=0; i<self.playbackDevices.length; i++ )
-            {
-                if( self.playbackDevices[i].enabled===true )
-                {
+            for( var i=0; i<self.playbackDevices.length; i++ ) {
+                if( self.playbackDevices[i].enabled===true ) {
                     self.currentDevice = self.playbackDevices[i];
                     break;
                 }
@@ -90,10 +86,9 @@ var audioConfigDirective = function($rootScope, toast, audioService, cleepServic
         };
 
         /**
-         * Init controller
+         * Init component
          */
-        self.init = function()
-        {
+        self.$onInit = function() {
             cleepService.getModuleConfig('audio')
                 .then(function(config) {
                     self.setConfig(config);
@@ -113,20 +108,11 @@ var audioConfigDirective = function($rootScope, toast, audioService, cleepServic
      	});
     };
 
-    var audioLink = function(scope, element, attrs, controller) {
-        controller.init();
-    };
-
     return {
         templateUrl: 'audio.config.html',
         replace: true,
         scope: true,
         controller: audioController,
         controllerAs: 'audioCtl',
-        link: audioLink
     };
-};
-
-var Cleep = angular.module('Cleep');
-Cleep.directive('audioConfigDirective', ['$rootScope', 'toastService', 'audioService', 'cleepService', audioConfigDirective])
-
+}]);

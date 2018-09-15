@@ -1,0 +1,10 @@
+{
+    "icon": "speaker",
+    "system": {
+        "services": ["audio.service.js"]
+    },
+    "config": {
+        "js": ["audio.directive.js"],
+        "html": ["audio.directive.html"]
+    }
+}

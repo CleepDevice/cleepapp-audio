@@ -17,9 +17,11 @@ class Audio(RaspIotResource):
     """
     MODULE_AUTHOR = u'Cleep'
     MODULE_VERSION = u'1.0.0'
+    MODULE_CATEGORY = u'APPLICATION'
     MODULE_PRICE = 0
     MODULE_DEPS = []
     MODULE_DESCRIPTION = u'Configure audio on your device'
+    MODULE_LONGDESCRIPTION = u''
     MODULE_LOCKED = True
     MODULE_TAGS = [u'audio', u'sound']
     MODULE_COUNTRY = None

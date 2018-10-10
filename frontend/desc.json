@@ -4,7 +4,7 @@
         "services": ["audio.service.js"]
     },
     "config": {
-        "js": ["audio.directive.js"],
-        "html": ["audio.directive.html"]
+        "js": ["audio.config.js"],
+        "html": ["audio.config.html"]
     }
 }

@@ -22,7 +22,7 @@ class Audio(RaspIotResource):
     MODULE_DEPS = []
     MODULE_DESCRIPTION = u'Configure audio on your device'
     MODULE_LONGDESCRIPTION = u'Application that helps you to configure audio on your device'
-    MODULE_LOCKED = True
+    MODULE_CORE = True
     MODULE_TAGS = [u'audio', u'sound']
     MODULE_COUNTRY = None
     MODULE_URLINFO = None

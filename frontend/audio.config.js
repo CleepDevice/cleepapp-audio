@@ -123,7 +123,7 @@ var audioConfigDirective = function(toast, audioService, raspiotService) {
     };
 
     return {
-        templateUrl: 'audio.directive.html',
+        templateUrl: 'audio.config.html',
         replace: true,
         scope: true,
         controller: audioController,

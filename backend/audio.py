@@ -16,7 +16,7 @@ class Audio(RaspIotResource):
     Audio module is in charge of configuring audio on raspberry pi
     """
     MODULE_AUTHOR = u'Cleep'
-    MODULE_VERSION = u'1.0.0'
+    MODULE_VERSION = u'1.0.1'
     MODULE_CATEGORY = u'APPLICATION'
     MODULE_PRICE = 0
     MODULE_DEPS = []

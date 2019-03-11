@@ -1,7 +1,7 @@
 {
     "icon": "speaker",
-    "system": {
-        "services": ["audio.service.js"]
+    "global": {
+        "js": ["audio.service.js"]
     },
     "config": {
         "js": ["audio.config.js"],

@@ -7,11 +7,13 @@
     <div layout="row" layout-align="space-between center" style="padding: 0 16px;">
         <div>
             <md-icon md-svg-icon="chevron-right"></md-icon>
-            <span style="padding-left: 28px;">Audio device</span>
+            <span style="padding-left: 28px;">Select audio device to use</span>
         </div>
         <div layout="row">
-            <md-select ng-model="audioCtl.currentDevice" placeholder="Playback device" class="md-no-underline">
-                <md-option ng-repeat="device in audioCtl.playbackDevices" ng-value="device">{{device.name}}{{!device.supported ? ' (device not supported!)' : ''}}</md-option>
+            <md-select ng-model="audioCtl.currentDevice" placeholder="Playback device" class="md-no-underline no-margin">
+                <md-option ng-repeat="device in audioCtl.playbackDevices" ng-value="device" ng-disabled="!device.supported">
+                    {{device.label}}{{!device.supported ? ' (no driver installed)' : ''}}
+                </md-option>
             </md-select>
             <div layout="row" layout-align="center center">
                 <md-button class="md-raised md-primary" ng-click="audioCtl.setDevice()" aria-label="Set device">

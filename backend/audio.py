@@ -28,9 +28,9 @@ class Audio(RaspIotResources):
     MODULE_CORE = True
     MODULE_TAGS = [u'audio', u'sound']
     MODULE_COUNTRY = None
-    MODULE_URLINFO = None
-    MODULE_URLHELP = None
-    MODULE_URLBUGS = None
+    MODULE_URLINFO = u'https://github.com/tangb/cleepmod-audio'
+    MODULE_URLHELP = u'https://github.com/tangb/cleepmod-audio/wiki'
+    MODULE_URLBUGS = u'https://github.com/tangb/cleepmod-audio/issues'
     MODULE_URLSITE = None
 
     MODULE_CONFIG_FILE = None
@@ -43,13 +43,13 @@ class Audio(RaspIotResources):
     }
 
     MODULE_RESOURCES = {
-        u'Raspberrypi audio (jack)': {
+        u'Raspberrypi soundcard (jack)': {
             u'audio.playback': {
                 u'hardware_id': u'bcm2835 ALSA',
                 u'permanent': False,
             }
         },
-        u'Raspberrypi audio (HDMI)': {
+        u'Raspberrypi soundcard (HDMI)': {
             u'audio.playback': {
                 u'hardware_id': u'bcm2835 IEC958/HDMI',
                 u'permanent': False,
@@ -94,12 +94,21 @@ class Audio(RaspIotResources):
         Module configuration
         """
         if not self.asoundrc.exists():
-            self.logger.debug(u'Create default audio configuration file')
-            self.asoundrc.set_default_device(self.DEFAULT_DEVICE[u'card'], self.DEFAULT_DEVICE[u'device'])
+            self.logger.debug(u'No audio config found set default one')
+            self._set_default_config()
 
         #register default audio drivers (for jack and HDMI outputs)
         for driver_name, driver in self.AUDIO_DRIVERS.items():
             self._register_driver(AudioDriver(driver_name, driver))
+
+    def _set_default_config(self):
+        """
+        Set default config. Use it when fatal error occured
+        It restores config for default raspberry audio device bcm2835.
+        """
+        self.asoundrc.set_default_device(self.DEFAULT_DEVICE[u'card'], self.DEFAULT_DEVICE[u'device'])
+        #make sure file is written
+        time.sleep(0.5)
 
     def get_module_config(self):
         """
@@ -118,21 +127,16 @@ class Audio(RaspIotResources):
         self.logger.debug('current_config=%s' % current_config)
         playback_devices = self.alsa.get_playback_devices()
         capture_devices = self.alsa.get_capture_devices()
-        volumes = self.alsa.get_volumes()
+        try:
+            volumes = self.alsa.get_volumes()
+        except:
+            #unable to get volumes, surely invalid device is configured, restore default config
+            self.logger.warn(u'Invalid audio configuration detected. Force default configuration.')
+            self._set_default_config()
+            #get again volumes
+            volumes = self.alsa.get_volumes()
 
-        #improve configuration content
-        #card_name = None
-        #if current_config is not None:
-        #    for name in playback_devices.keys():
-        #        if playback_devices[name][u'cardid']==current_config[u'cardid']:
-        #            card_name = name
-        #            break
-        #    current_config[u'cardname'] = card_name
-        #search selected card according to current configuration
-        
-        
-
-        #improve audio devices using label
+        #improve audio devices adding label
         audio_resources = self._get_resources('audio\.')
         if u'audio.playback' in audio_resources:
             for device_name, device in playback_devices.items():
@@ -143,7 +147,7 @@ class Audio(RaspIotResources):
                 if device_name in audio_resources[u'audio.playback']:
                     device.update({u'label': audio_resources[u'audio.playback'][device_name][u'label']})
                 else:
-                    device.update({u'label': u'<%s>' % device[u'name']})
+                    device.update({u'label': device[u'name']})
         if u'audio.capture' in audio_resources:
             for device_name, device in capture_devices.items():
                 if device[u'cardid']==current_config[u'cardid'] and device[u'deviceid']==current_config[u'deviceid']:
@@ -153,7 +157,7 @@ class Audio(RaspIotResources):
                 if device_name in audio_resources[u'audio.capture']:
                     device.update({u'label': audio_resources[u'audio.capture'][device_name][u'label']})
                 else:
-                    device.update({u'label': u'<%s>' % device[u'name']})
+                    device.update({u'label': device[u'name']})
 
         return {
             u'config': current_config,

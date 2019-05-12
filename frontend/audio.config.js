@@ -2,14 +2,13 @@
  * Audio config directive
  * Handle audio configuration
  */
-var audioConfigDirective = function(toast, audioService, raspiotService) {
+var audioConfigDirective = function($rootScope, toast, audioService, raspiotService) {
 
     var audioController = function()
     {
         var self = this;
         self.playbackDevices = [];
         self.captureDevices = [];
-        self.config = {}
         self.volumePlayback = 0;
         self.volumeCapture = 0;
         self.currentDevice = null;
@@ -33,13 +32,17 @@ var audioConfigDirective = function(toast, audioService, raspiotService) {
          */
         self.setDevice = function()
         {
-            audioService.setDefaultDevice(self.currentDevice.cardid, self.currentDevice.deviceid)
+            if( !self.currentDevice ) {
+                toast.info('Please select a device');
+                return;
+            }
+
+            audioService.setDefaultDevice(self.currentDevice.name)
                 .then(function(resp) {
                     //reload module config to get new volumes
                     return raspiotService.reloadModuleConfig('audio');
                 })
-                .then(function(config) {
-                    self.setConfig(config);
+                .then(function() {
                     toast.success('Selected device is now the default audio card');
                 });
         };
@@ -67,40 +70,21 @@ var audioConfigDirective = function(toast, audioService, raspiotService) {
                 });
         };
 
-        /**
-         * Flatten specified object
-         */
-        self.flattenDict = function(obj)
-        {
-            out = []
-            for( var item in obj )
-            {
-                out.push(obj[item]);
-            }
-            return out;
-        };
-
-        //set internal members according to config
+        //set internal members according to received config
         self.setConfig = function(config)
         {
-            self.playbackDevices = self.flattenDict(config.devices.playback);
-            self.captureDevices = self.flattenDict(config.devices.capture);
-            self.config = config.config;
+            self.playbackDevices = config.devices.playback;
+            self.captureDevices = config.devices.capture;
             self.volumePlayback = config.volumes.playback;
             self.volumeCapture = config.volumes.capture;
-
-            if( !self.config )
-            {
-                //no config, nothing else to do
-                return;
-            }
 
             //search for current device in playback devices list
             for( var i=0; i<self.playbackDevices.length; i++ )
             {
-                if( self.playbackDevices[i].cardid===self.config.cardid && self.playbackDevices[i].deviceid===self.config.deviceid )
+                if( self.playbackDevices[i].selected===true )
                 {
                     self.currentDevice = self.playbackDevices[i];
+                    break;
                 }
             }
         };
@@ -116,6 +100,17 @@ var audioConfigDirective = function(toast, audioService, raspiotService) {
                 });
         };
 
+     	/**
+      	 * Watch for config changes
+      	 */
+     	$rootScope.$watchCollection(function() {
+        	return raspiotService.modules['audio'];
+     	}, function(newConfig, oldConfig) {
+        	if( newConfig )
+         	{
+            	self.setConfig(newConfig.config);
+         	}
+     	});
     };
 
     var audioLink = function(scope, element, attrs, controller) {
@@ -133,5 +128,5 @@ var audioConfigDirective = function(toast, audioService, raspiotService) {
 };
 
 var RaspIot = angular.module('RaspIot');
-RaspIot.directive('audioConfigDirective', ['toastService', 'audioService', 'raspiotService', audioConfigDirective])
+RaspIot.directive('audioConfigDirective', ['$rootScope', 'toastService', 'audioService', 'raspiotService', audioConfigDirective])
 

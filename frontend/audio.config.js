@@ -37,7 +37,7 @@ var audioConfigDirective = function($rootScope, toast, audioService, raspiotServ
                 return;
             }
 
-            audioService.setDefaultDevice(self.currentDevice.name)
+            audioService.selectDevice(self.currentDevice.label)
                 .then(function(resp) {
                     //reload module config to get new volumes
                     return raspiotService.reloadModuleConfig('audio');
@@ -81,7 +81,7 @@ var audioConfigDirective = function($rootScope, toast, audioService, raspiotServ
             //search for current device in playback devices list
             for( var i=0; i<self.playbackDevices.length; i++ )
             {
-                if( self.playbackDevices[i].selected===true )
+                if( self.playbackDevices[i].enabled===true )
                 {
                     self.currentDevice = self.playbackDevices[i];
                     break;

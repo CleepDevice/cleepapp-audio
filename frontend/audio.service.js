@@ -9,8 +9,8 @@ var audioService = function($q, $rootScope, rpcService) {
         return rpcService.sendCommand('set_volumes', 'audio', {'playback':playback, 'capture':capture});
     };
 
-    self.setDefaultDevice = function(cardName) {
-        return rpcService.sendCommand('set_default_device', 'audio', {'device_name':cardName});
+    self.selectDevice = function(label) {
+        return rpcService.sendCommand('select_device', 'audio', {'driver_name':label}, 30.0);
     };
 
     self.testPlaying = function()

@@ -11,6 +11,7 @@ from raspiot.libs.commands.alsa import Alsa
 from raspiot.libs.configs.etcasoundconf import EtcAsoundConf
 from raspiot.libs.drivers.driver import Driver
 from .bcm2835audiodriver import Bcm2835AudioDriver
+import raspiot.libs.internals.tools as Tools
 
 __all__ = ['Audio']
 
@@ -34,7 +35,10 @@ class Audio(RaspIotResources):
     MODULE_URLBUGS = u'https://github.com/tangb/cleepmod-audio/issues'
     MODULE_URLSITE = None
 
-    MODULE_CONFIG_FILE = None
+    MODULE_CONFIG_FILE = u'audio.conf'
+    DEFAULT_CONFIG = {
+        u'driver': None
+    }
 
     TEST_SOUND = u'/opt/raspiot/sounds/connected.wav'
 
@@ -64,119 +68,45 @@ class Audio(RaspIotResources):
         RaspIotResources.__init__(self, bootstrap, debug_enabled)
 
         #members
-        self.alsa = Alsa()
+        self.alsa = Alsa(self.cleep_filesystem)
         self.asoundconf = EtcAsoundConf(self.cleep_filesystem)
-        self.bcm2835_driver = Bcm2835AudioDriver(self.cleep_filesystem, 'Raspberry pi soundcard')
+        self.bcm2835_driver = Bcm2835AudioDriver(self.cleep_filesystem)
         self.__cached_playback_devices = None
         self.__cached_capture_devices = None
+
+        #register default audio drivers
+        self._register_driver(self.bcm2835_driver)
 
     def _configure(self):
         """
         Module configuration
         """
-        if not self.asoundconf.exists():
-            self.logger.debug(u'No audio config found set default one')
-            self._set_default_config()
+        #restore selected soundcard
+        selected_driver_name = self._get_config_field(u'driver')
+        if selected_driver_name is None and Tools.raspberry_pi_infos()[u'audio']:
+            #set default sound driver to raspberry pi embedde one
+            self._set_config_field(u'driver', self.bcm2835_driver.name)
 
-        #register default audio drivers
-        self._register_driver(self.bcm2835_driver)
+        if selected_driver_name is None:
+            #still no selected driver name, it means audio is not supported on this board
+            self.logger.info(u'No audio supported on this device')
+            return
+        self.logger.debug(u'Selected audio driver name "%s"' % selected_driver_name)
 
-    def _set_default_config(self):
-        """
-        Set default config. Use it when fatal error occured
-        It restores config for default raspberry audio device bcm2835.
-        """
-        self.bcm2835_driver.enable()
+        #get selected driver
+        driver = self.drivers.get_driver(Driver.DRIVER_AUDIO, selected_driver_name)
 
-    def _get_driver(self, card_name, audio_drivers=None):
-        """
-        Return driver according to specified parameters
 
-        Args:
-            card_name (string): card name
-            audio_drivers (list): list of audio drivers. If None get it from drivers
+        #enable driver if possible
+        if not driver.is_installed():
+            self.logger.error(u'Unable to enable soundcard because it is not properly installed. Please install it manually.')
+        elif not driver.is_enabled():
+            self.logger.info(u'Enabling audio driver "%s"' % driver.name)
+            if not driver.enable():
+                self.logger.error(u'Unable to enable soundcard. Internal driver error.')
 
-        Returns:
-            AudioDriver: driver instance or None if not found
-        """
-        if audio_drivers is None:
-            audio_drivers = self.drivers.get_drivers(Driver.DRIVER_AUDIO)
 
-        for _, driver in audio_drivers.items():
-            device_infos = driver.get_device_infos()
-            if device_infos[u'cardname']==card_name:
-                self.logger.debug(u'Found driver "%s" for current audio device "%s"' % (driver.name, card_name))
-                return driver
-
-        return None
-
-    def _get_current_driver(self, selected_device=None, audio_drivers=None):
-        """
-        Return current driver for selected audio device
-
-        Args:
-            selected_device (dict): selected device infos. If None get it from alsa lib
-            audio_drivers (list): list of audio drivers. If None get it from drivers
-
-        Returns:
-            AudioDriver: current audio driver or None if device not found
-        """
-        if selected_device is None:
-            selected_device = self.alsa.get_selected_device()
-
-        return self._get_driver(selected_device[u'name'], audio_drivers) if selected_device else None
-
-    def _get_current_volumes(self, selected_device, audio_drivers):
-        """
-        Get currently configured volumes
-
-        Args:
-            selected_device (dict): current selected audio device. Provided for performance
-            audio_drivers (list): list of audio drivers. Provided for performance
-
-        Returns:
-            dict: volumes or None if not found::
-
-                {
-                    playback (int): playback volume
-                    capture (int): capture volume
-                }
-
-        """
-        driver = self._get_current_driver(selected_device)
-        return driver.get_volumes() if driver else None
-
-    def _fill_devices_cache(self, audio_drivers):
-        """
-        Fill devices list the first time config is loaded
-
-        Args:
-            audio_drivers (list): list of audio drivers
-        """
-        self.__cached_playback_devices = self.alsa.get_playback_devices()
-        self.__cached_capture_devices = self.alsa.get_capture_devices()
-
-        #get supported device names
-        handled_device_names = {}
-        for _, driver in audio_drivers.items():
-            device_infos = driver.get_device_infos()
-            handled_device_names[device_infos[u'cardname']] = driver.name
-
-        #fill cache
-        for _, device in self.__cached_playback_devices.items():
-            if device[u'name'] in handled_device_names:
-                device[u'label'] = handled_device_names[device[u'name']]
-                device[u'supported'] = True
-            elif u'label' not in device:
-                device[u'label'] = device[u'name']
-                device[u'supported'] = False
-        for _, device in self.__cached_capture_devices.items():
-            if device[u'name'] in handled_device_names:
-                device[u'label'] = handled_device_names[device[u'name']]
-                device[u'supported'] = True
-            elif u'label' not in device:
-                device[u'label'] = device[u'name']
-                device[u'supported'] = False
+        self.logger.warn('++++++++++++++++++++ end of config audio ++++++++++++++++++++++')
 
     def get_module_config(self):
         """
@@ -186,55 +116,51 @@ class Audio(RaspIotResources):
             dict: audio config::
 
                 {
-                    config (dict): config from asoundrc file
                     volumes (dict): volumes values (playback and capture)
                     devices (dict): audio devices installed on device (playback and capture)
                 }
 
         """
-        #gather audio informations
-        audio_drivers = self.drivers.get_drivers(Driver.DRIVER_AUDIO)
-        selected_device = self.alsa.get_selected_device()
-
-        #get playback and capture devices
-        if not self.__cached_playback_devices or not self.__cached_capture_devices:
-            self._fill_devices_cache(audio_drivers)
-        playback_devices = copy.deepcopy(self.__cached_playback_devices)
-        capture_devices = copy.deepcopy(self.__cached_capture_devices)
-
-        #get volume for current selected device
-        volumes = self._get_current_volumes(selected_device, audio_drivers)
-        if volumes is None:
-            self.logger.warn(u'Invalid audio configuration detected. Force default configuration.')
-            self._set_default_config()
-
-            #get again volumes
-            volumes = self._get_current_volumes(selected_device, audio_drivers)
-
-        #set selected flag (only for playback)
-        for device_name, device in playback_devices.items():
-            if device[u'name']==selected_device[u'name']:
-                device[u'selected'] = True
-            else:
-                device[u'selected'] = False
-
-        return {
-            u'volumes': {
-                u'playback': volumes[u'playback'] if volumes else None,
-                u'capture': volumes[u'capture'] if volumes else None,
-            },
-            u'devices': {
-                u'playback': sorted(playback_devices.values(), key=lambda k:k[u'label']),
-                u'capture': sorted(capture_devices.values(), key=lambda k:k[u'label']),
-            }
+        playbacks = []
+        captures = []
+        volumes = {
+            u'playback': None,
+            u'capture': None,
         }
 
-    def set_default_device(self, device_name):
         """
-        Set default audio device
+        audio_drivers = self.drivers.get_drivers(Driver.DRIVER_AUDIO)
+        for driver_name, driver in audio_drivers.items():
+            device_infos = driver.get_device_infos()
+            device = {
+                u'name': driver.card_name,
+                u'label': driver_name, 
+                u'device': device_infos,
+                u'enabled': driver.is_enabled(),
+                u'installed': driver.is_installed(),
+            }
+            if device_infos[u'playback']:
+                playbacks.append(device)
+            if device_infos[u'capture']:
+                captures.append(device)
+            if device[u'enabled'] and device[u'installed']:
+                volumes = driver.get_volumes()
+        """
+
+        return {
+            u'devices': {
+                u'playback': sorted(playbacks, key=lambda k:k[u'label']),
+                u'capture': sorted(captures, key=lambda k:k[u'label']),
+            },
+            u'volumes': volumes
+        }
+
+    def select_device(self, driver_name):
+        """
+        Select audio device
 
         Args:
-            device_name (int): device name
+            driver_name (string): driver name
 
         Returns:
             bool: True if device saved successfully
@@ -242,23 +168,38 @@ class Audio(RaspIotResources):
         Raises:
             InvalidParameter: if parameter is invalid
         """
+        #check params
+        if driver_name is None or len(driver_name)==0:
+            raise MissingParameter(u'Parameter "drive_name" is missing')
+
         #get drivers
-        old_driver = self._get_current_driver()
-        new_driver = self._get_driver(device_name)
+        selected_driver_name = self._get_config_field(u'driver')
+        old_driver = self.drivers.get_driver(Driver.DRIVER_AUDIO, selected_driver_name) if selected_driver_name is not None else None
+        new_driver = self.drivers.get_driver(Driver.DRIVER_AUDIO, driver_name)
         
         if not new_driver:
-            raise InvalidParameter(u'No driver installed from specified device')
-        self.logger.info(u'Set default audio device to: %s' % new_driver.name)
+            raise InvalidParameter(u'Specified driver does not exist')
 
         #check if already selected
-        if old_driver.name==new_driver.name:
+        if old_driver is not None and old_driver.name==new_driver.name:
             self.logger.info(u'Audio device is already selected. Nothing changed')
             return True
 
         #enable driver
-        self.logger.debug(u'Disable previous driver: %s' % old_driver.name)
-        old_driver.disable()
-        return new_driver.enable()
+        self.logger.info(u'Using audio driver "%s"' % new_driver.name)
+        if old_driver:
+            self.logger.debug(u'Disable previous driver: %s' % old_driver.name)
+            if not old_driver.disable():
+                raise CommandError(u'Unable to disable current device')
+        self.logger.debug(u'Enable new driver "%s"' % new_driver.name)
+        if not new_driver.enable():
+            self.logger.debug(u'Unable to enable new driver. Revert re-enabling old driver')
+            if old_driver:
+                old_driver.enable()
+            raise CommandError(u'Unable to enable selected device')
+
+        #everything is fine, save new driver
+        self._set_config_field(u'driver', new_driver.name)
     
     def set_volumes(self, playback, capture):
         """
@@ -279,16 +220,26 @@ class Audio(RaspIotResources):
 
         """
         self.logger.info(u'Set volumes to: playback[%s%%] capture[%s%%]' % (playback, capture))
-        volumes = None
 
-        driver = self._get_current_driver()
-        if driver:
-            volumes = driver.set_volumes(playback, capture)
-        
-        return {
-            u'playback': volumes[u'playback'] if volumes else None,
-            u'capture': volumes[u'capture'] if volumes else None,
+        selected_driver_name = self._get_config_field(u'driver')
+        volumes = {
+            u'playback': None,
+            u'capture': None,
         }
+
+        #no driver configured
+        if not selected_driver_name:
+            return volumes
+
+        driver = self.drivers.get_driver(Driver.DRIVER_AUDIO, selected_driver_name)
+        #no driver found
+        if not driver:
+            return volumes
+
+        #set volumes
+        driver.set_volumes(playback, capture)
+
+        return driver.get_volumes()
 
     def test_playing(self):
         """

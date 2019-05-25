@@ -96,7 +96,6 @@ class Audio(RaspIotResources):
         #get selected driver
         driver = self.drivers.get_driver(Driver.DRIVER_AUDIO, selected_driver_name)
 
-
         #enable driver if possible
         if not driver.is_installed():
             self.logger.error(u'Unable to enable soundcard because it is not properly installed. Please install it manually.')
@@ -104,9 +103,6 @@ class Audio(RaspIotResources):
             self.logger.info(u'Enabling audio driver "%s"' % driver.name)
             if not driver.enable():
                 self.logger.error(u'Unable to enable soundcard. Internal driver error.')
-
-
-        self.logger.warn('++++++++++++++++++++ end of config audio ++++++++++++++++++++++')
 
     def get_module_config(self):
         """
@@ -128,7 +124,6 @@ class Audio(RaspIotResources):
             u'capture': None,
         }
 
-        """
         audio_drivers = self.drivers.get_drivers(Driver.DRIVER_AUDIO)
         for driver_name, driver in audio_drivers.items():
             device_infos = driver.get_device_infos()
@@ -145,7 +140,6 @@ class Audio(RaspIotResources):
                 captures.append(device)
             if device[u'enabled'] and device[u'installed']:
                 volumes = driver.get_volumes()
-        """
 
         return {
             u'devices': {
@@ -180,19 +174,18 @@ class Audio(RaspIotResources):
         if not new_driver:
             raise InvalidParameter(u'Specified driver does not exist')
 
-        #check if already selected
-        if old_driver is not None and old_driver.name==new_driver.name:
-            self.logger.info(u'Audio device is already selected. Nothing changed')
-            return True
-
-        #enable driver
+        #disable old driver
         self.logger.info(u'Using audio driver "%s"' % new_driver.name)
         if old_driver:
-            self.logger.debug(u'Disable previous driver: %s' % old_driver.name)
-            if not old_driver.disable():
+            disabled = old_driver.disable()
+            self.logger.debug(u'Disable previous driver "%s": %s' % (old_driver.name, disabled))
+            if not disabled:
                 raise CommandError(u'Unable to disable current device')
+        
+        #enable new driver
         self.logger.debug(u'Enable new driver "%s"' % new_driver.name)
-        if not new_driver.enable():
+        driver_enabled = new_driver.enable()
+        if not driver_enabled or not new_driver._is_card_enabled():
             self.logger.debug(u'Unable to enable new driver. Revert re-enabling old driver')
             if old_driver:
                 old_driver.enable()
@@ -200,7 +193,7 @@ class Audio(RaspIotResources):
 
         #everything is fine, save new driver
         self._set_config_field(u'driver', new_driver.name)
-    
+
     def set_volumes(self, playback, capture):
         """
         Update volume

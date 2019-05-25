@@ -27,6 +27,7 @@ class Bcm2835AudioDriver(AudioDriver):
     VOLUME_CONTROL = u'PCM'
     VOLUME_PATTERN = (u'Mono', r'\[(\d*)%\]')
 
+    AMIXER_AUTO = 0
     AMIXER_JACK = 1
     AMIXER_HDMI = 2
 
@@ -46,39 +47,31 @@ class Bcm2835AudioDriver(AudioDriver):
         self.alsa = Alsa(self.cleep_filesystem)
         self.asoundconf = EtcAsoundConf(self.cleep_filesystem)
         self.configtxt = ConfigTxt(self.cleep_filesystem)
-        self.modprobe = Modprobe()
+        #self.modprobe = Modprobe()
         self.console = Console()
 
-    #def _set_card_id(self):
-    #    """
-    #    Set card id
-    #    """
-    #    for card_id, card in self.alsa.get_playback_devices().items():
-    #        if card[u'name'].find(u'bcm2835')>=0:
-    #            self.card_id = card_id
-    #            break
-
-    def get_device_infos(self):
+    def _get_card_name(self):
         """
-        Returns device infos
+        Return card name
 
         Returns:
-            dict: device infos::
-
-                {
-                    cardname (string): card name
-                    cardid (int): card id
-                    deviceid (int): device id
-                    playback (bool): True if device can play audio
-                    capture (bool): True if device can record audio
-                }
-
+            string: card name
         """
-        return {
-            u'cardname': self.CARD_NAME,
-            u'playback': True,
-            u'capture': False,
-        }
+        return self.CARD_NAME
+
+    def _get_card_capabilities(self):
+        """
+        Return card capabilities
+
+        Returns:
+            tuple: card capabilities::
+
+                (
+                    bool: playback capability,
+                    bool: capture capability
+                )
+        """
+        return (True, False)
 
     def _install(self, params=None):
         """
@@ -93,9 +86,6 @@ class Bcm2835AudioDriver(AudioDriver):
         #installing native audio device consists of enabling dtparam audio in /boot/config.txt
         if not self.configtxt.enable_audio():
             raise Exception(u'Error enabling audio in /boot/config.txt')
-
-        #also register system module
-        self.register_system_modules([self.MODULE_NAME])
 
         return True
 
@@ -113,9 +103,6 @@ class Bcm2835AudioDriver(AudioDriver):
         if not self.configtxt.disable_audio():
             raise Exception(u'Error disabling audio in /boot/config.txt')
 
-        #also unregister system module
-        self.unregister_system_modules([self.MODULE_NAME])
-
         return True
             
     def is_installed(self):
@@ -131,26 +118,23 @@ class Bcm2835AudioDriver(AudioDriver):
         """
         Enable driver
         """
-        #clean previous alsa conf
-        self.asoundconf.delete()
-
-        #enable system module
-        if not self.modprobe.load_module(self.MODULE_NAME):
-            self.logger.error(u'Unable to load system module "%s"' % self.MODULE_NAME)
+        #create default /etc/asound.conf
+        card_infos = self._get_cardid_deviceid()
+        self.logger.debug(u'card_infos=%s' % str(card_infos))
+        if card_infos[0] is None:
+            self.logger.error(u'Unable to get alsa infos for card "%s"' % self.CARD_NAME)
+            return False
+        self.logger.debug(u'Write to /etc/asound.conf values "%s:%s"' % (card_infos[0], card_infos[1]))
+        if not self.asoundconf.save_default_file(card_infos[0], card_infos[1]):
+            self.logger.error(u'Unable to create /etc/asound.conf for soundcard "%s"' % self.CARD_NAME)
             return False
 
-        #create default /etc/asound.conf
-        #self.logger.debug(u'Write to /etc/asound.conf values "%s:%s"' % (self.card_id, self.device_id))
-        #if not self.asoundconf.set_default_device(self.card_id, self.device_id):
-        #    self.logger.error(u'Unable to create /etc/asound.conf for soundcard "%s"' % self.CARD_NAME)
-        #    return False
-
-        #configure default (jack) in alsa
-        if not self.alsa.amixer_control(Alsa.CSET, 3, 1):
+        #configure default output to "auto" in alsa (0=auto, 1=headphone jack, 2=HDMI)
+        if not self.alsa.amixer_control(Alsa.CSET, 3, self.AMIXER_JACK):
             self.logger.error(u'Error executing amixer command')
             return False
 
-        #force saving alsa conf
+        #force saving alsa conf (this will create asound.state if needed)
         self.alsa.save()
 
         return True
@@ -162,34 +146,31 @@ class Bcm2835AudioDriver(AudioDriver):
         Args:
             params (dict): additional parameters
         """
-        #configure alsa
-        #if not self.alsa.amixer_control(Alsa.CSET, 3, 0):
-        #    self.logger.error(u'Error executing amixer command')
-        #    return False
+        #configure alsa to "auto"
+        self.logger.debug(u'Configure alsa')
+        if not self.alsa.amixer_control(Alsa.CSET, 3, self.AMIXER_AUTO):
+            self.logger.error(u'Error executing amixer command')
+            return False
 
+        self.logger.debug(u'Delete /etc/asound.conf and /var/lib/alsa/asound.state')
         if not self.asoundconf.delete():
             self.logger.error(u'Unable to delete asound.conf file')
             return False
 
-        self.logger.debug(u'Unloading system module "%s"' % self.MODULE_NAME)
-        if not self.modprobe.unload_module(self.MODULE_NAME):
-            self.logger.error(u'Unable to unload system module "%s"' % self.MODULE_NAME)
-            return False
-
+        self.logger.debug(u'Driver disabled')
         return True
 
     def is_enabled(self):
         """
-        Returns True if driver is enabled
+        Is driver enabled ?
 
         Returns:
-            bool: True if enable
+            bool: True if driver enabled
         """
-        selected_device = self.alsa.get_selected_device()
-        if selected_device and selected_device[u'name']==self.CARD_NAME:
-            return True
-            
-        return False
+        card = self._is_card_enabled(self.CARD_NAME)
+        asound = self.asoundconf.exists()
+        
+        return card and asound
 
     def get_volumes(self):
         """

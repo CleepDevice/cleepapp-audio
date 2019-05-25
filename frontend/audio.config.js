@@ -38,12 +38,12 @@ var audioConfigDirective = function($rootScope, toast, audioService, raspiotServ
             }
 
             audioService.selectDevice(self.currentDevice.label)
-                .then(function(resp) {
-                    //reload module config to get new volumes
-                    return raspiotService.reloadModuleConfig('audio');
-                })
                 .then(function() {
                     toast.success('Selected device is now the default audio card');
+                })
+                .finally(function() {
+                    //reload module config to get new volumes
+                    return raspiotService.reloadModuleConfig('audio');
                 });
         };
 

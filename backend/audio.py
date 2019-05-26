@@ -48,11 +48,11 @@ class Audio(RaspIotResources):
     }
 
     MODULE_RESOURCES = {
-        u'Raspberrypi soundcard': {
-            u'audio.playback': {
-                u'hardware_id': u'bcm2835 ALSA',
-                u'permanent': False,
-            }
+        u'audio.playback': {
+            u'permanent': False,
+        },
+        u'audio.capture': {
+            u'permanent': False,
         }
     }
 
@@ -245,8 +245,11 @@ class Audio(RaspIotResources):
         """
         Record sound during few seconds and play it
         """
-        #request capture resource
+        #request capture resource (non blocking)
         self._need_resource(u'audio.capture')
+
+        #pause to simulate 5 seconds recording
+        time.sleep(5.0)
 
     def _resource_acquired(self, resource_name):
         """
@@ -271,7 +274,7 @@ class Audio(RaspIotResources):
             #record sound
             sound = self.alsa.record_sound(timeout=5.0)
             self.logger.debug(u'Recorded sound: %s' % sound)
-            self.alsa.play_sound(sound)
+            self.alsa.play_sound(sound, timeout=6.0)
 
             #release resource
             self._release_resource(u'audio.capture')
@@ -281,7 +284,7 @@ class Audio(RaspIotResources):
             try:
                 os.remove(sound)
             except:
-                self.logger.warn(u'Unable to remove recorded test sound "%s"' % sound)
+                self.logger.warn(u'Unable to delete recorded test sound "%s"' % sound)
 
         else:
             self.logger.error(u'Unsupported resource "%s" acquired' % resource_name)

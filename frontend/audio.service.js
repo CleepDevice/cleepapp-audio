@@ -20,7 +20,7 @@ var audioService = function($q, $rootScope, rpcService) {
 
     self.testRecording = function()
     {
-        return rpcService.sendCommand('test_recording', 'audio', null, 30);
+        return rpcService.sendCommand('test_recording', 'audio', null, 10);
     };
 
 };

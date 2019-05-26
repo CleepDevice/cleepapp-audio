@@ -66,7 +66,7 @@ var audioConfigDirective = function($rootScope, toast, audioService, raspiotServ
             toast.loading('Recording 5 seconds...');
             audioService.testRecording()
                 .then(function() {
-                    toast.success('You should have heard your recording');
+                    toast.success('You will hear your record');
                 });
         };
 

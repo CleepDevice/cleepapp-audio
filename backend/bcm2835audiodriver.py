@@ -83,6 +83,9 @@ class Bcm2835AudioDriver(AudioDriver):
         if not Tools.raspberry_pi_infos()[u'audio']:
             raise Exception(u'Raspberry pi has no onboard audio device')
 
+        #as the default driver and just in case, delete existing config
+        self.asoundconf.delete()
+
         #installing native audio device consists of enabling dtparam audio in /boot/config.txt
         if not self.configtxt.enable_audio():
             raise Exception(u'Error enabling audio in /boot/config.txt')
@@ -118,6 +121,9 @@ class Bcm2835AudioDriver(AudioDriver):
         """
         Enable driver
         """
+        #as the default driver and just in case, delete existing config
+        self.asoundconf.delete()
+
         #create default /etc/asound.conf
         card_infos = self._get_cardid_deviceid()
         self.logger.debug(u'card_infos=%s' % str(card_infos))

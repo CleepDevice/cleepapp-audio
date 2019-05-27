@@ -173,10 +173,12 @@ class Audio(RaspIotResources):
         
         if not new_driver:
             raise InvalidParameter(u'Specified driver does not exist')
+        if not new_driver.is_installed():
+            raise InvalidParameter(u'Can\'t selected this device because its driver seems not to be installed')
 
         #disable old driver
         self.logger.info(u'Using audio driver "%s"' % new_driver.name)
-        if old_driver:
+        if old_driver and old_driver.is_installed():
             disabled = old_driver.disable()
             self.logger.debug(u'Disable previous driver "%s": %s' % (old_driver.name, disabled))
             if not disabled:

@@ -84,7 +84,7 @@ class Audio(RaspIotResources):
         #restore selected soundcard
         selected_driver_name = self._get_config_field(u'driver')
         if selected_driver_name is None and Tools.raspberry_pi_infos()[u'audio']:
-            #set default sound driver to raspberry pi embedde one
+            #set default sound driver to raspberry pi embedded one
             self._set_config_field(u'driver', self.bcm2835_driver.name)
 
         if selected_driver_name is None:
@@ -95,6 +95,16 @@ class Audio(RaspIotResources):
 
         #get selected driver
         driver = self.drivers.get_driver(Driver.DRIVER_AUDIO, selected_driver_name)
+
+        #fallback to default driver if necessary (and possible)
+        if not driver:
+            if Tools.raspberry_pi_infos()[u'audio']:
+                self.logger.warn('Configured audio driver is not loaded, fallback to default one.')
+                self._set_config_field(u'driver', self.bcm2835_driver.name)
+                driver = self.drivers.get_driver(Driver.DRIVER_AUDIO, self.bcm2835_driver.name)
+            else:
+                self.logger.info(u'No audio supported on this device')
+                return
 
         #enable driver if possible
         if not driver.is_installed():

@@ -12,7 +12,7 @@ from mock import Mock
 class TestAudio(unittest.TestCase):
 
     def setUp(self):
-        self.session = session.Session(logging.CRITICAL)
+        self.session = session.TestSession(logging.CRITICAL)
         _mod = Audio
         self.module = self.session.setup(_mod)
 

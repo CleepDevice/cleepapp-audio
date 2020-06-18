@@ -25,6 +25,6 @@ var audioService = function($q, $rootScope, rpcService) {
 
 };
     
-var RaspIot = angular.module('RaspIot');
-RaspIot.service('audioService', ['$q', '$rootScope', 'rpcService', audioService]);
+var Cleep = angular.module('Cleep');
+Cleep.service('audioService', ['$q', '$rootScope', 'rpcService', audioService]);
 

@@ -2,7 +2,7 @@
  * Audio config directive
  * Handle audio configuration
  */
-var audioConfigDirective = function($rootScope, toast, audioService, raspiotService) {
+var audioConfigDirective = function($rootScope, toast, audioService, cleepService) {
 
     var audioController = function()
     {
@@ -43,7 +43,7 @@ var audioConfigDirective = function($rootScope, toast, audioService, raspiotServ
                 })
                 .finally(function() {
                     //reload module config to get new volumes
-                    return raspiotService.reloadModuleConfig('audio');
+                    return cleepService.reloadModuleConfig('audio');
                 });
         };
 
@@ -94,7 +94,7 @@ var audioConfigDirective = function($rootScope, toast, audioService, raspiotServ
          */
         self.init = function()
         {
-            raspiotService.getModuleConfig('audio')
+            cleepService.getModuleConfig('audio')
                 .then(function(config) {
                     self.setConfig(config);
                 });
@@ -104,7 +104,7 @@ var audioConfigDirective = function($rootScope, toast, audioService, raspiotServ
       	 * Watch for config changes
       	 */
      	$rootScope.$watchCollection(function() {
-        	return raspiotService.modules['audio'];
+        	return cleepService.modules['audio'];
      	}, function(newConfig, oldConfig) {
         	if( newConfig )
          	{
@@ -127,6 +127,6 @@ var audioConfigDirective = function($rootScope, toast, audioService, raspiotServ
     };
 };
 
-var RaspIot = angular.module('RaspIot');
-RaspIot.directive('audioConfigDirective', ['$rootScope', 'toastService', 'audioService', 'raspiotService', audioConfigDirective])
+var Cleep = angular.module('Cleep');
+Cleep.directive('audioConfigDirective', ['$rootScope', 'toastService', 'audioService', 'cleepService', audioConfigDirective])
 

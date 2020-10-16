@@ -1,4 +1,4 @@
-# cleepmod-audio
+# cleepmod-audio [![Coverage Status](https://coveralls.io/repos/github/tangb/cleepmod-audio/badge.svg?branch=master)](https://coveralls.io/github/tangb/cleepmod-audio?branch=master)
 
 Audio application for Cleep
 

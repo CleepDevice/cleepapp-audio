@@ -175,8 +175,16 @@ class Audio(CleepResources):
             InvalidParameter: if parameter is invalid
         """
         # check params
-        if driver_name is None or len(driver_name) == 0:
-            raise MissingParameter('Parameter "driver_name" is missing')
+        self._check_parameters([
+            {'name': 'driver_name', 'type': str, 'value': driver_name},
+            {
+                'name': 'driver_name',
+                'type': str,
+                'value': driver_name,
+                'validator': lambda val: driver_name != self._get_config_field('driver'),
+                'message': 'Device "%s" is already selected' % driver_name
+            },
+        ])
 
         # get drivers
         selected_driver_name = self._get_config_field('driver')
@@ -227,14 +235,24 @@ class Audio(CleepResources):
         Raises:
             InvalidParameters if parameter is invalid
         """
-        if not isinstance(playback, int):
-            raise InvalidParameter('Parameter "playback" has invalid type')
-        if not isinstance(capture, int):
-            raise InvalidParameter('Parameter "capture" has invalid type')
-        if playback < 0 or playback > 100:
-            raise InvalidParameter('Parameter "playback" must be a valid percentage')
-        if capture < 0 or capture > 100:
-            raise InvalidParameter('Parameter "capture" must be a valid percentage')
+        self._check_parameters([
+            {'name': 'playback', 'type': int, 'value': playback, 'none': True},
+            {
+                'name': 'playback',
+                'type': int,
+                'value': playback,
+                'validator': lambda val: 0 <= val <= 100,
+                'message': 'Parameter "playback" must be 0<=playback<=100'
+            },
+            {'name': 'capture', 'type': int, 'value': capture, 'none': True},
+            {
+                'name': 'capture',
+                'type': int,
+                'value': capture,
+                'validator': lambda val: 0 <= val <= 100,
+                'message': 'Parameter "capture" must be 0<=capture<=100'
+            },
+        ])
 
         self.logger.info('Set volumes to: playback[%s%%] capture[%s%%]' % (playback, capture))
 

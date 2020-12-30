@@ -19,7 +19,7 @@ class Audio(CleepResources):
     Audio module is in charge of configuring audio on raspberry pi
     """
     MODULE_AUTHOR = 'Cleep'
-    MODULE_VERSION = '2.0.0'
+    MODULE_VERSION = '2.0.1'
     MODULE_CATEGORY = 'APPLICATION'
     MODULE_PRICE = 0
     MODULE_DEPS = []

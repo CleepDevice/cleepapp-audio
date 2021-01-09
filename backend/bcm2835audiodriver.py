@@ -26,19 +26,17 @@ class Bcm2835AudioDriver(AudioDriver):
     AMIXER_JACK = 1
     AMIXER_HDMI = 2
 
-    def __init__(self, cleep_filesystem):
+    def __init__(self, params):
         """
         Constructor
 
         Args:
-            cleep_filesystem (CleepFilesystem): CleepFilesystem instance
+            params (dict): driver parameters. See Driver class
         """
         # init
-        AudioDriver.__init__(self, cleep_filesystem, 'Raspberry pi soundcard', self.CARD_NAME)
+        AudioDriver.__init__(self, params, 'Raspberry pi soundcard', self.CARD_NAME)
 
         # members
-        self.logger = logging.getLogger(self.__class__.__name__)
-        # self.logger.setLevel(logging.DEBUG)
         self.asoundconf = EtcAsoundConf(self.cleep_filesystem)
         self.configtxt = ConfigTxt(self.cleep_filesystem)
         self.console = Console()

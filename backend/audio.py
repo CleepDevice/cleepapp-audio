@@ -67,7 +67,9 @@ class Audio(CleepResources):
         # members
         self.alsa = Alsa(self.cleep_filesystem)
         self.asoundconf = EtcAsoundConf(self.cleep_filesystem)
-        self.bcm2835_driver = Bcm2835AudioDriver(self.cleep_filesystem)
+        self.bcm2835_driver = Bcm2835AudioDriver({
+            'cleep_filesystem': self.cleep_filesystem
+        })
         self.__cached_playback_devices = None
         self.__cached_capture_devices = None
 

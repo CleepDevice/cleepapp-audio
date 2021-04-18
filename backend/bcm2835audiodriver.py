@@ -137,6 +137,7 @@ class Bcm2835AudioDriver(AudioDriver):
 
         # configure default output to "auto" in alsa (0=auto, 1=headphone jack, 2=HDMI) if necessary
         route_control_numid = self.get_control_numid('Route')
+        self.logger.trace('route_control_numid=%s' % route_control_numid)
         if route_control_numid is not None:
             if not self.alsa.amixer_control(Alsa.CSET, route_control_numid, self.AMIXER_JACK):
                 self.logger.error('Error executing amixer command')

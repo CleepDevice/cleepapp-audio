@@ -85,7 +85,7 @@ class TestAudio(unittest.TestCase):
         self.assertEqual(conf['devices']['playback'][0]['installed'], True)
         self.assertEqual(conf['devices']['playback'][0]['device']['deviceid'], 0)
         self.assertEqual(conf['devices']['playback'][0]['device']['playback'], True)
-        self.assertEqual(conf['devices']['playback'][0]['device']['cardname'], 'bcm2835 ALSA')
+        self.assertTrue(conf['devices']['playback'][0]['device']['cardname'].startswith('bcm2835'))
         self.assertEqual(conf['devices']['playback'][0]['device']['capture'], False)
         self.assertEqual(conf['devices']['playback'][0]['device']['cardid'], 0)
 
@@ -143,9 +143,9 @@ class TestAudio(unittest.TestCase):
         with self.assertRaises(MissingParameter) as cm:
             self.module.select_device(None)
         self.assertEqual(str(cm.exception), 'Parameter "driver_name" is missing')
-        with self.assertRaises(MissingParameter) as cm:
+        with self.assertRaises(InvalidParameter) as cm:
             self.module.select_device('')
-        self.assertEqual(str(cm.exception), 'Parameter "driver_name" is missing')
+        self.assertEqual(str(cm.exception), 'Parameter "driver_name" is invalid (specified="")')
 
     def test_select_device_unknown_new_driver(self):
         old_driver = Mock()
@@ -208,18 +208,18 @@ class TestAudio(unittest.TestCase):
     def test_set_volumes_invalid_parameters(self):
         self.init_session()
 
-        with self.assertRaises(InvalidParameter) as cm:
+        with self.assertRaises(MissingParameter) as cm:
             self.module.set_volumes(None, 12)
-        self.assertEqual(str(cm.exception), 'Parameter "playback" has invalid type')
+        self.assertEqual(str(cm.exception), 'Parameter "volume" is missing')
         with self.assertRaises(InvalidParameter) as cm:
             self.module.set_volumes(12, '12')
-        self.assertEqual(str(cm.exception), 'Parameter "capture" has invalid type')
+        self.assertEqual(str(cm.exception), 'Parameter "capture" is invalid (specified="12")')
         with self.assertRaises(InvalidParameter) as cm:
             self.module.set_volumes(-12, 12)
-        self.assertEqual(str(cm.exception), 'Parameter "playback" must be a valid percentage')
+        self.assertEqual(str(cm.exception), 'Parameter "playback" must be 0<=playback<=100')
         with self.assertRaises(InvalidParameter) as cm:
             self.module.set_volumes(12, 102)
-        self.assertEqual(str(cm.exception), 'Parameter "capture" must be a valid percentage')
+        self.assertEqual(str(cm.exception), 'Parameter "capture" must be 0<=capture<=100')
 
     def test_set_volumes_no_driver_selected(self):
         driver = Mock()
@@ -300,7 +300,9 @@ class TestBcm2835AudioDriver(unittest.TestCase):
 
     def init_session(self):
         self.fs = Mock()
-        self.driver = Bcm2835AudioDriver(self.fs)
+        self.driver = Bcm2835AudioDriver({
+            'cleep_filesystem': self.fs,
+        })
 
     @patch('backend.bcm2835audiodriver.Tools')
     @patch('backend.bcm2835audiodriver.ConfigTxt')
@@ -363,17 +365,19 @@ class TestBcm2835AudioDriver(unittest.TestCase):
         self.assertEqual(str(cm.exception), 'Raspberry pi has no onboard audio device')
 
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
-    @patch('backend.bcm2835audiodriver.Alsa')
-    def test_enable(self, mock_alsa, mock_asound):
+    def test_enable(self, mock_asound):
         self.init_session()
+        mock_alsa = MagicMock()
+        self.driver.alsa = mock_alsa
         self.driver.get_cardid_deviceid = Mock(return_value=(0, 0))
+        self.driver.get_control_numid = Mock(return_value=1)
     
         self.assertTrue(self.driver.enable())
 
         self.assertTrue(mock_asound.return_value.delete.called)
         self.assertTrue(mock_asound.return_value.save_default_file.called)
-        self.assertTrue(mock_alsa.return_value.amixer_control.called)
-        self.assertTrue(mock_alsa.return_value.save.called)
+        self.assertTrue(mock_alsa.amixer_control.called)
+        self.assertTrue(mock_alsa.save.called)
 
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
     @patch('backend.bcm2835audiodriver.Alsa')
@@ -403,50 +407,55 @@ class TestBcm2835AudioDriver(unittest.TestCase):
         self.assertFalse(mock_alsa.return_value.save.called)
 
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
-    @patch('backend.bcm2835audiodriver.Alsa')
-    def test_enable_alsa_amixer_control_failed(self, mock_alsa, mock_asound):
-        mock_alsa.return_value.amixer_control.return_value = False
+    def test_enable_alsa_amixer_control_failed(self, mock_asound):
         self.init_session()
+        mock_alsa = MagicMock()
+        mock_alsa.amixer_control.return_value = False
+        self.driver.alsa = mock_alsa
         self.driver.get_cardid_deviceid = Mock(return_value=(0, 0))
+        self.driver.get_control_numid = Mock(return_value=1)
     
         self.assertFalse(self.driver.enable())
 
         self.assertTrue(mock_asound.return_value.delete.called)
         self.assertTrue(mock_asound.return_value.save_default_file.called)
-        self.assertTrue(mock_alsa.return_value.amixer_control.called)
-        self.assertFalse(mock_alsa.return_value.save.called)
+        self.assertTrue(mock_alsa.amixer_control.called)
+        self.assertFalse(mock_alsa.save.called)
 
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
-    @patch('backend.bcm2835audiodriver.Alsa')
-    def test_disable(self, mock_alsa, mock_asound):
+    def test_disable(self, mock_asound):
         self.init_session()
+        mock_alsa = Mock()
+        self.driver.alsa = mock_alsa
     
         self.assertTrue(self.driver.disable())
 
         self.assertTrue(mock_asound.return_value.delete.called)
-        self.assertTrue(mock_alsa.return_value.amixer_control.called)
+        self.assertTrue(mock_alsa.amixer_control.called)
 
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
-    @patch('backend.bcm2835audiodriver.Alsa')
-    def test_disable_alsa_amixer_control_failed(self, mock_alsa, mock_asound):
-        mock_alsa.return_value.amixer_control.return_value = False
+    def test_disable_alsa_amixer_control_failed(self, mock_asound):
         self.init_session()
+        mock_alsa = Mock()
+        mock_alsa.amixer_control.return_value = False
+        self.driver.alsa = mock_alsa
     
         self.assertFalse(self.driver.disable())
 
-        self.assertTrue(mock_alsa.return_value.amixer_control.called)
+        self.assertTrue(mock_alsa.amixer_control.called)
         self.assertFalse(mock_asound.return_value.delete.called)
 
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
-    @patch('backend.bcm2835audiodriver.Alsa')
-    def test_disable_asound_delete_failed(self, mock_alsa, mock_asound):
+    def test_disable_asound_delete_failed(self, mock_asound):
         mock_asound.return_value.delete.return_value = False
         self.init_session()
+        mock_alsa = Mock()
+        self.driver.alsa = mock_alsa
     
         self.assertFalse(self.driver.disable())
 
         self.assertTrue(mock_asound.return_value.delete.called)
-        self.assertTrue(mock_alsa.return_value.amixer_control.called)
+        self.assertTrue(mock_alsa.amixer_control.called)
 
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
     def test_is_enabled(self, mock_asound):
@@ -464,19 +473,21 @@ class TestBcm2835AudioDriver(unittest.TestCase):
         mock_asound.return_value.exists.return_value = False
         self.assertFalse(self.driver.is_enabled())
 
-    @patch('backend.bcm2835audiodriver.Alsa')
-    def test_get_volumes(self, mock_alsa):
+    def test_get_volumes(self):
         self.init_session()
+        mock_alsa = Mock()
+        mock_alsa.get_volume.return_value = 66
+        self.driver.alsa = mock_alsa
 
-        mock_alsa.return_value.get_volume.return_value = 66
         vols =  self.driver.get_volumes()
         self.assertEqual(vols, { 'playback': 66, 'capture': None })
 
-    @patch('backend.bcm2835audiodriver.Alsa')
-    def test_set_volumes(self, mock_alsa):
+    def test_set_volumes(self):
         self.init_session()
+        mock_alsa = Mock()
+        mock_alsa.set_volume.return_value = 99
+        self.driver.alsa = mock_alsa
 
-        mock_alsa.return_value.set_volume.return_value = 99
         vols = self.driver.set_volumes(playback=12, capture=34)
         self.assertEqual(vols, { 'playback': 99, 'capture': None })
 

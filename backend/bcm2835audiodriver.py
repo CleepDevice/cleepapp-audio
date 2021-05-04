@@ -228,3 +228,12 @@ class Bcm2835AudioDriver(AudioDriver):
             'capture': None
         }
 
+    def require_reboot(self):
+        """
+        Require reboot after install/uninstall
+
+        Returns:
+            bool: True if reboot required
+        """
+        return False
+

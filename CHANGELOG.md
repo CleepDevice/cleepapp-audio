@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.3 - 2021-06-02
+## v2.0.4 - 2021-06-02
 
 * Update driver stuff after core changes
 

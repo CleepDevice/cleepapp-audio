@@ -214,7 +214,7 @@ class TestAudio(unittest.TestCase):
         self.assertEqual(str(cm.exception), 'Parameter "volume" is missing')
         with self.assertRaises(InvalidParameter) as cm:
             self.module.set_volumes(12, '12')
-        self.assertEqual(str(cm.exception), 'Parameter "capture" is invalid (specified="12")')
+        self.assertEqual(str(cm.exception), 'Parameter "capture" must be of type "int"')
         with self.assertRaises(InvalidParameter) as cm:
             self.module.set_volumes(-12, 12)
         self.assertEqual(str(cm.exception), 'Parameter "playback" must be 0<=playback<=100')
@@ -301,9 +301,9 @@ class TestBcm2835AudioDriver(unittest.TestCase):
 
     def init_session(self):
         self.fs = Mock()
-        self.driver = Bcm2835AudioDriver({
-            'cleep_filesystem': self.fs,
-        })
+        self.driver = Bcm2835AudioDriver()
+        self.driver.cleep_filesystem = Mock()
+        self.driver._on_registered()
 
     @patch('backend.bcm2835audiodriver.Tools')
     @patch('backend.bcm2835audiodriver.ConfigTxt')

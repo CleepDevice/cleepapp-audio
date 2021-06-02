@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.3 - 2021-06-02
+
+* Update driver stuff after core changes
+
 ## v2.0.3 - 2021-05-04
 
 * Backend: do not reboot after driver install/uninstall

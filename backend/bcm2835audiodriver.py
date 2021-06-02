@@ -26,16 +26,17 @@ class Bcm2835AudioDriver(AudioDriver):
     AMIXER_JACK = 1
     AMIXER_HDMI = 2
 
-    def __init__(self, params):
+    def __init__(self):
         """
         Constructor
-
-        Args:
-            params (dict): driver parameters. See Driver class
         """
         # init
-        AudioDriver.__init__(self, params, 'Raspberry pi soundcard', self.CARD_NAME)
+        AudioDriver.__init__(self, 'Raspberry pi soundcard', self.CARD_NAME)
 
+    def _on_audio_registered(self):
+        """
+        Audio driver registered
+        """
         # members
         self.asoundconf = EtcAsoundConf(self.cleep_filesystem)
         self.configtxt = ConfigTxt(self.cleep_filesystem)

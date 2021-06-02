@@ -19,14 +19,13 @@ class Audio(CleepResources):
     Audio module is in charge of configuring audio on raspberry pi
     """
     MODULE_AUTHOR = 'Cleep'
-    MODULE_VERSION = '2.0.3'
+    MODULE_VERSION = '2.0.4'
     MODULE_CATEGORY = 'APPLICATION'
     MODULE_PRICE = 0
     MODULE_DEPS = []
     MODULE_DESCRIPTION = 'Configure audio on your device'
     MODULE_LONGDESCRIPTION = 'Application that helps you to configure audio on your device'
     MODULE_TAGS = ['audio', 'sound']
-    MODULE_COUNTRY = None
     MODULE_URLINFO = 'https://github.com/tangb/cleepmod-audio'
     MODULE_URLHELP = 'https://github.com/tangb/cleepmod-audio/wiki'
     MODULE_URLBUGS = 'https://github.com/tangb/cleepmod-audio/issues'
@@ -67,9 +66,7 @@ class Audio(CleepResources):
         # members
         self.alsa = Alsa(self.cleep_filesystem)
         self.asoundconf = EtcAsoundConf(self.cleep_filesystem)
-        self.bcm2835_driver = Bcm2835AudioDriver({
-            'cleep_filesystem': self.cleep_filesystem
-        })
+        self.bcm2835_driver = Bcm2835AudioDriver()
         self.__cached_playback_devices = None
         self.__cached_capture_devices = None
 

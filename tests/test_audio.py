@@ -36,8 +36,13 @@ class TestAudio(unittest.TestCase):
 
     @patch('backend.audio.Tools')
     def test_init_no_audio_on_device(self, mock_tools):
-        mock_tools.raspberry_pi_infos.return_value = { 'audio': False }
-        self.init_session()
+        mock_tools.raspberry_pi_infos.return_value = {'audio': False}
+        drivers_mock = Mock()
+        self.init_session(bootstrap={
+            'drivers': drivers_mock,
+        })
+
+        self.assertFalse(drivers_mock.get_drivers.called)
 
     def test_init_configured_driver_not_available(self):
         default_driver = Mock()
@@ -93,11 +98,13 @@ class TestAudio(unittest.TestCase):
         # self.assertTrue(isinstance(conf['volumes']['playback'], int))
         # self.assertIsNone(conf['volumes']['capture'])
 
-    def test_select_device(self):
-        old_driver = Mock()
+    @patch('backend.audio.Tools')
+    def test_select_device(self, mock_tools):
+        mock_tools.raspberry_pi_infos.return_value = {'audio': True}
+        old_driver = Mock(name='olddriver')
         old_driver.is_installed.return_value = True
         old_driver.disable.return_value = True
-        new_driver = Mock()
+        new_driver = Mock(name='newdriver')
         # add mock class variable
         attrs = {'name': 'dummydriver'}
         new_driver.configure_mock(**attrs)
@@ -109,6 +116,7 @@ class TestAudio(unittest.TestCase):
         self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
+        self.module._get_config_field = Mock(return_value='selecteddriver')
         self.module._set_config_field = Mock()
 
         self.module.select_device('dummydriver')
@@ -116,7 +124,9 @@ class TestAudio(unittest.TestCase):
         self.assertTrue(new_driver.enable.called)
         self.module._set_config_field.assert_called_with('driver', 'dummydriver')
 
-    def test_select_device_fallback_old_driver_if_error(self):
+    @patch('backend.audio.Tools')
+    def test_select_device_fallback_old_driver_if_error(self, mock_tools):
+        mock_tools.raspberry_pi_infos.return_value = {'audio': True}
         old_driver = Mock()
         old_driver.is_installed.return_value = True
         old_driver.disable.return_value = True
@@ -132,6 +142,7 @@ class TestAudio(unittest.TestCase):
         self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
+        self.module._get_config_field = Mock(return_value='selecteddriver')
         self.module._set_config_field = Mock()
 
         with self.assertRaises(CommandError) as cm:
@@ -148,7 +159,9 @@ class TestAudio(unittest.TestCase):
             self.module.select_device('')
         self.assertEqual(str(cm.exception), 'Parameter "driver_name" is invalid (specified="")')
 
-    def test_select_device_unknown_new_driver(self):
+    @patch('backend.audio.Tools')
+    def test_select_device_unknown_new_driver(self, mock_tools):
+        mock_tools.raspberry_pi_infos.return_value = {'audio': True}
         old_driver = Mock()
         old_driver.is_installed.return_value = True
         old_driver.disable.return_value = True
@@ -164,17 +177,20 @@ class TestAudio(unittest.TestCase):
         self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
+        self.module._get_config_field = Mock(return_value='selecteddriver')
         self.module._set_config_field = Mock()
 
         with self.assertRaises(InvalidParameter) as cm:
             self.module.select_device('dummydriver')
         self.assertEqual(str(cm.exception), 'Specified driver does not exist')
 
-    def test_select_device_new_driver_not_installed(self):
-        old_driver = Mock()
+    @patch('backend.audio.Tools')
+    def test_select_device_new_driver_not_installed(self, mock_tools):
+        mock_tools.raspberry_pi_infos.return_value = {'audio': True}
+        old_driver = Mock(name='olddriver')
         old_driver.is_installed.return_value = True
         old_driver.disable.return_value = True
-        new_driver = Mock()
+        new_driver = Mock(name='newdriver')
         # add mock class variable
         attrs = {'name': 'dummydriver'}
         new_driver.configure_mock(**attrs)
@@ -186,6 +202,7 @@ class TestAudio(unittest.TestCase):
         self.init_session(bootstrap={
             'drivers': drivers_mock,
         })
+        self.module._get_config_field = Mock(return_value='drivername')
         self.module._set_config_field = Mock()
 
         with self.assertRaises(InvalidParameter) as cm:
@@ -206,7 +223,18 @@ class TestAudio(unittest.TestCase):
 
         driver.set_volumes.assert_called_with(12, 34)
 
-    def test_set_volumes_invalid_parameters(self):
+    @patch('backend.audio.Tools')
+    def test_set_volumes_invalid_parameters(self, mock_tools):
+        mock_tools.raspberry_pi_infos.return_value = {'audio': True}
+        old_driver = Mock()
+        old_driver.is_installed.return_value = True
+        old_driver.disable.return_value = True
+        drivers_mock = Mock()
+        drivers_mock.get_driver.return_value = old_driver
+        self.init_session(bootstrap={
+            'drivers': drivers_mock,
+        })
+        self.module._get_config_field = Mock(return_value='selecteddriver')
         self.init_session()
 
         with self.assertRaises(MissingParameter) as cm:

@@ -10,27 +10,21 @@ from cleep.libs.internals.console import Console
 from cleep.libs.configs.configtxt import ConfigTxt
 import cleep.libs.internals.tools as Tools
 
-class Bcm2835AudioDriver(AudioDriver):
+class UsbAudioDriver(AudioDriver):
     """
-    Audio driver for BCM2835 device (embedded raspberrypi soundcard)
+    Audio driver for USB audio devices
 
-    Note:
-        https://www.raspberrypi.org/documentation/configuration/audio-config.md
+    Tested hardare:
+     * Mini external USB stereo speaker: https://thepihut.com/collections/raspberry-pi-usb-audio/products/mini-external-usb-stereo-speaker
     """
-
-    MODULE_NAME = 'snd_bcm2835'
 
     VOLUME_PATTERN = ('Mono', r'\[(\d*)%\]')
-
-    AMIXER_AUTO = 0
-    AMIXER_JACK = 1
-    AMIXER_HDMI = 2
 
     def __init__(self):
         """
         Constructor
         """
-        AudioDriver.__init__(self, 'Raspberry pi soundcard')
+        AudioDriver.__init__(self, 'USB audio device')
 
     def _on_audio_registered(self):
         """
@@ -48,9 +42,9 @@ class Bcm2835AudioDriver(AudioDriver):
         Returns:
             string: card name
         """
-        pattern = re.compile('bcm2835', re.IGNORECASE)
+        pattern = re.compile('usb', re.IGNORECASE)
         for device_name in devices_names:
-            if pattern.match(device_name['device_name']):
+            if pattern.match(device_name['device_desc']):
                 return device_name['card_name']
 
     def get_card_capabilities(self):
@@ -74,15 +68,18 @@ class Bcm2835AudioDriver(AudioDriver):
         Args:
             params (dict): additional parameters
         """
-        if not Tools.raspberry_pi_infos()['audio']:
-            raise Exception('Raspberry pi has no onboard audio device')
-
         # as the default driver and just in case, delete existing config
         self.asoundconf.delete()
 
+        # install pulseaudio debian package
+        resp = self.console.command('apt update -qq && apt install -q --yes pulseaudio', timeout=300)
+        if resp["returncode"] != 0:
+            self.logger.error('Unable to install USB audio: %s', resp["stderr"])
+            return False
+
         # installing native audio device consists of enabling dtparam audio in /boot/config.txt
         if not self.configtxt.enable_audio():
-            raise Exception('Error enabling raspberry pi audio')
+            raise Exception('Error enabling USB audio')
 
         return True
 
@@ -93,13 +90,9 @@ class Bcm2835AudioDriver(AudioDriver):
         Args:
             params (dict): additional parameters
         """
-        if not Tools.raspberry_pi_infos()['audio']:
-            raise Exception('Raspberry pi has no onboard audio device')
-
-        # uninstalling native audio device consists of disabling dtparam audio in /boot/config.txt
-        if not self.configtxt.disable_audio():
-            raise Exception('Error disabling raspberry pi audio')
-
+        resp = self.console.command('apt purge --q --yes pulseaudio')
+        if resp["error"] != 0:
+            self.logger.error('Unable to uninstall USB audio: %s', error["stderr"])
         return True
 
     def is_installed(self):
@@ -109,18 +102,22 @@ class Bcm2835AudioDriver(AudioDriver):
         Returns:
             bool: True if driver is installed
         """
-        return self.configtxt.is_audio_enabled()
+        resp = self.console.command('dpkg -s pulseaudio')
+        return True if resp["returncode"] == 0 else False
 
     def enable(self, params=None):
         """
         Enable driver
         """
+        if not self.get_card_name():
+            raise Exception('No USB audio found. Please connect it before enabling it')
+
         # as the default driver and just in case, delete existing config
         self.asoundconf.delete()
 
         # create default /etc/asound.conf
         card_infos = self.get_cardid_deviceid()
-        self.logger.trace('card_infos=%s' % str(card_infos))
+        self.logger.debug('card_infos=%s' % str(card_infos))
         if card_infos[0] is None:
             self.logger.error('Unable to get alsa infos for card "%s"' % self.get_card_name())
             return False
@@ -129,18 +126,9 @@ class Bcm2835AudioDriver(AudioDriver):
             self.logger.error('Unable to create /etc/asound.conf for soundcard "%s"' % self.get_card_name())
             return False
 
-        # configure default output to "auto" in alsa (0=auto, 1=headphone jack, 2=HDMI) if necessary
-        route_control_numid = self.get_control_numid('Route')
-        self.logger.trace('route_control_numid=%s' % route_control_numid)
-        if route_control_numid is not None:
-            if not self.alsa.amixer_control(Alsa.CSET, route_control_numid, self.AMIXER_JACK):
-                self.logger.error('Error executing amixer command')
-                return False
-
         # force saving alsa conf (this will create asound.state if needed)
         self.alsa.save()
 
-        self.logger.debug('Driver enabled')
         return True
 
     def disable(self, params=None):
@@ -172,7 +160,7 @@ class Bcm2835AudioDriver(AudioDriver):
 
     def _set_volumes_controls(self):
         """
-        Set controls used to configure volumes
+        Set controls to control volumes
         """
         # search for appropriate volume control
         controls = self.alsa.get_simple_controls()

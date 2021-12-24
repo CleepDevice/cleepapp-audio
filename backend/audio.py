@@ -10,6 +10,7 @@ from cleep.libs.configs.etcasoundconf import EtcAsoundConf
 from cleep.libs.drivers.driver import Driver
 import cleep.libs.internals.tools as Tools
 from .bcm2835audiodriver import Bcm2835AudioDriver
+from .usbaudiodriver import UsbAudioDriver
 
 __all__ = ['Audio']
 
@@ -37,11 +38,6 @@ class Audio(CleepResources):
 
     TEST_SOUND = '/opt/cleep/sounds/connected.wav'
 
-    DEFAULT_DEVICE = {
-        'card': 0,
-        'device': 0
-    }
-
     MODULE_RESOURCES = {
         'audio.playback': {
             'permanent': False,
@@ -66,11 +62,13 @@ class Audio(CleepResources):
         self.alsa = Alsa(self.cleep_filesystem)
         self.asoundconf = EtcAsoundConf(self.cleep_filesystem)
         self.bcm2835_driver = Bcm2835AudioDriver()
+        self.usb_driver = UsbAudioDriver()
         self.__cached_playback_devices = None
         self.__cached_capture_devices = None
 
         # register default audio drivers
         self._register_driver(self.bcm2835_driver)
+        self._register_driver(self.usb_driver)
 
     def _configure(self):
         """
@@ -92,7 +90,7 @@ class Audio(CleepResources):
             # still no selected driver name, it means audio is not supported on this board
             self.logger.info('No audio supported on this device')
             return
-        self.logger.debug('Selected audio driver name "%s"' % selected_driver_name)
+        self.logger.info('Selected audio driver "%s"' % selected_driver_name)
 
         # get selected driver
         driver = self.drivers.get_driver(Driver.DRIVER_AUDIO, selected_driver_name)
@@ -105,14 +103,16 @@ class Audio(CleepResources):
 
         # enable driver if possible
         if not driver:
-            self.logger.info('No driver found while it should')
+            self.logger.info('No audio driver found while it should')
             return
         if not driver.is_installed():
-            self.logger.error('Unable to enable soundcard because it is not properly installed. Please install it manually.')
+            self.logger.error('Unable to enable soundcard because it is not properly installed. Please reinstall it.')
         elif not driver.is_enabled():
             self.logger.info('Enabling audio driver "%s"' % driver.name)
             if not driver.enable():
-                self.logger.error('Unable to enable soundcard. Internal driver error.')
+                self.logger.error('Unable to enable audio. Internal driver error.')
+        else:
+            self.logger.debug('Audio driver seems to be already configured')
 
     def get_module_config(self):
         """
@@ -136,20 +136,23 @@ class Audio(CleepResources):
 
         audio_drivers = self.drivers.get_drivers(Driver.DRIVER_AUDIO)
         for driver_name, driver in audio_drivers.items():
-            device_infos = driver.get_device_infos()
-            device = {
-                'name': driver.card_name,
-                'label': driver_name,
-                'device': device_infos,
-                'enabled': driver.is_enabled(),
-                'installed': driver.is_installed(),
-            }
-            if device_infos['playback']:
-                playbacks.append(device)
-            if device_infos['capture']:
-                captures.append(device)
-            if device['enabled'] and device['installed']:
-                volumes = driver.get_volumes()
+            try:
+                device_infos = driver.get_device_infos()
+                device = {
+                    'name': driver.get_card_name(),
+                    'label': driver_name,
+                    'device': device_infos,
+                    'enabled': driver.is_enabled(),
+                    'installed': driver.is_installed(),
+                }
+                if device_infos['playback']:
+                    playbacks.append(device)
+                if device_infos['capture']:
+                    captures.append(device)
+                if device['enabled'] and device['installed']:
+                    volumes = driver.get_volumes()
+            except Exception as error:
+                self.logger.debug('Driver "%s" disabled due to error: %s', driver_name, str(error))
 
         return {
             'devices': {

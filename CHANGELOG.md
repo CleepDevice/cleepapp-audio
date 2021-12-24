@@ -1,5 +1,14 @@
 # Changelog
 
+## [UNRELEASED]
+
+### Changed
+* Update app and bcm driver after core changes on audiodriver
+* Improvement to avoid app crash while loading invalid driver
+
+### Added
+* Add USB driver to handle USB audio hardware
+
 ## v2.0.4 - 2021-06-02
 
 * Update driver stuff after core changes

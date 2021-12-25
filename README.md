@@ -4,7 +4,7 @@ Audio application for Cleep
 
 This application is part of Cleep core and is installed by default. It can't be uninstalled.
 
-## Drivers
+## Drivers
 
 This application installs following audio drivers:
 * Default raspberry pi audio driver (bcm2835) to support audio out of the box

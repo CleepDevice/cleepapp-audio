@@ -217,6 +217,9 @@ class Audio(CleepResources):
         # everything is fine, save new driver
         self._set_config_field('driver', new_driver.name)
 
+        # restart cleep
+        self.send_command('restart_cleep', 'system')
+
     def set_volumes(self, playback, capture):
         """
         Update volume

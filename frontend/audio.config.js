@@ -40,7 +40,7 @@ function($rootScope, toast, audioService, cleepService) {
 
             audioService.selectDevice(self.currentDevice.label)
                 .then(function() {
-                    toast.success('Selected device is now the default audio card');
+                    toast.success('Audio device changed. Cleep will restart in few seconds');
                 })
                 .finally(function() {
                     //reload module config to get new volumes

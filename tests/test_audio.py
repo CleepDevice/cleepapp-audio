@@ -454,37 +454,19 @@ class TestBcm2835AudioDriver(unittest.TestCase):
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
     def test_disable(self, mock_asound):
         self.init_session()
-        mock_alsa = Mock()
-        self.driver.alsa = mock_alsa
     
         self.assertTrue(self.driver.disable())
 
         self.assertTrue(mock_asound.return_value.delete.called)
-        self.assertTrue(mock_alsa.amixer_control.called)
-
-    @patch('backend.bcm2835audiodriver.EtcAsoundConf')
-    def test_disable_alsa_amixer_control_failed(self, mock_asound):
-        self.init_session()
-        mock_alsa = Mock()
-        mock_alsa.amixer_control.return_value = False
-        self.driver.alsa = mock_alsa
-    
-        self.assertFalse(self.driver.disable())
-
-        self.assertTrue(mock_alsa.amixer_control.called)
-        self.assertFalse(mock_asound.return_value.delete.called)
 
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
     def test_disable_asound_delete_failed(self, mock_asound):
         mock_asound.return_value.delete.return_value = False
         self.init_session()
-        mock_alsa = Mock()
-        self.driver.alsa = mock_alsa
     
         self.assertFalse(self.driver.disable())
 
         self.assertTrue(mock_asound.return_value.delete.called)
-        self.assertTrue(mock_alsa.amixer_control.called)
 
     @patch('backend.bcm2835audiodriver.EtcAsoundConf')
     def test_is_enabled(self, mock_asound):

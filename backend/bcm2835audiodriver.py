@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
 import re
 from cleep.libs.commands.alsa import Alsa
 from cleep.libs.configs.etcasoundconf import EtcAsoundConf
@@ -9,6 +8,7 @@ from cleep.libs.drivers.audiodriver import AudioDriver
 from cleep.libs.internals.console import Console
 from cleep.libs.configs.configtxt import ConfigTxt
 import cleep.libs.internals.tools as Tools
+
 
 class Bcm2835AudioDriver(AudioDriver):
     """
@@ -18,9 +18,9 @@ class Bcm2835AudioDriver(AudioDriver):
         https://www.raspberrypi.org/documentation/configuration/audio-config.md
     """
 
-    MODULE_NAME = 'snd_bcm2835'
+    MODULE_NAME = "snd_bcm2835"
 
-    VOLUME_PATTERN = ('Mono', r'\[(\d*)%\]')
+    VOLUME_PATTERN = ("Mono", r"\[(\d*)%\]")
 
     AMIXER_AUTO = 0
     AMIXER_JACK = 1
@@ -30,7 +30,13 @@ class Bcm2835AudioDriver(AudioDriver):
         """
         Constructor
         """
-        AudioDriver.__init__(self, 'Raspberry pi soundcard')
+        AudioDriver.__init__(self, "Raspberry pi soundcard")
+
+        self.asoundconf = None
+        self.configtxt = None
+        self.console = None
+        self.volume_control = ""
+        self.volume_control_numid = None
 
     def _on_audio_registered(self):
         """
@@ -39,19 +45,20 @@ class Bcm2835AudioDriver(AudioDriver):
         self.asoundconf = EtcAsoundConf(self.cleep_filesystem)
         self.configtxt = ConfigTxt(self.cleep_filesystem)
         self.console = Console()
-        self.volume_control = ''
 
     def _get_card_name(self, devices_names):
         """
         Return card name
 
         Returns:
-            string: card name
+            string: card name or None if card not found
         """
-        pattern = re.compile('bcm2835', re.IGNORECASE)
+        pattern = re.compile("bcm2835", re.IGNORECASE)
         for device_name in devices_names:
-            if pattern.match(device_name['device_name']):
-                return device_name['card_name']
+            if pattern.match(device_name["device_name"]):
+                return device_name["card_name"]
+
+        return None
 
     def get_card_capabilities(self):
         """
@@ -74,15 +81,15 @@ class Bcm2835AudioDriver(AudioDriver):
         Args:
             params (dict): additional parameters
         """
-        if not Tools.raspberry_pi_infos()['audio']:
-            raise Exception('Raspberry pi has no onboard audio device')
+        if not Tools.raspberry_pi_infos()["audio"]:
+            raise Exception("Raspberry pi has no onboard audio device")
 
         # as the default driver and just in case, delete existing config
         self.asoundconf.delete()
 
         # installing native audio device consists of enabling dtparam audio in /boot/config.txt
         if not self.configtxt.enable_audio():
-            raise Exception('Error enabling raspberry pi audio')
+            raise Exception("Error enabling raspberry pi audio")
 
         return True
 
@@ -93,12 +100,12 @@ class Bcm2835AudioDriver(AudioDriver):
         Args:
             params (dict): additional parameters
         """
-        if not Tools.raspberry_pi_infos()['audio']:
-            raise Exception('Raspberry pi has no onboard audio device')
+        if not Tools.raspberry_pi_infos()["audio"]:
+            raise Exception("Raspberry pi has no onboard audio device")
 
         # uninstalling native audio device consists of disabling dtparam audio in /boot/config.txt
         if not self.configtxt.disable_audio():
-            raise Exception('Error disabling raspberry pi audio')
+            raise Exception("Error disabling raspberry pi audio")
 
         return True
 
@@ -120,27 +127,36 @@ class Bcm2835AudioDriver(AudioDriver):
 
         # create default /etc/asound.conf
         card_infos = self.get_cardid_deviceid()
-        self.logger.trace('card_infos=%s' % str(card_infos))
+        self.logger.trace("card_infos=%s", str(card_infos))
         if card_infos[0] is None:
-            self.logger.error('Unable to get alsa infos for card "%s"' % self.get_card_name())
+            self.logger.error(
+                'Unable to get alsa infos for card "%s"', self.get_card_name()
+            )
             return False
-        self.logger.debug('Write to /etc/asound.conf values "%s:%s"' % (card_infos[0], card_infos[1]))
+        self.logger.debug(
+            'Write to /etc/asound.conf values "%s:%s"', card_infos[0], card_infos[1]
+        )
         if not self.asoundconf.save_default_file(card_infos[0], card_infos[1]):
-            self.logger.error('Unable to create /etc/asound.conf for soundcard "%s"' % self.get_card_name())
+            self.logger.error(
+                'Unable to create /etc/asound.conf for soundcard "%s"',
+                self.get_card_name(),
+            )
             return False
 
         # configure default output to "auto" in alsa (0=auto, 1=headphone jack, 2=HDMI) if necessary
-        route_control_numid = self.get_control_numid('Route')
-        self.logger.trace('route_control_numid=%s' % route_control_numid)
+        route_control_numid = self.get_control_numid("Route")
+        self.logger.trace("route_control_numid=%s", route_control_numid)
         if route_control_numid is not None:
-            if not self.alsa.amixer_control(Alsa.CSET, route_control_numid, self.AMIXER_JACK):
-                self.logger.error('Error executing amixer command')
+            if not self.alsa.amixer_control(
+                Alsa.CSET, route_control_numid, self.AMIXER_JACK
+            ):
+                self.logger.error("Error executing amixer command")
                 return False
 
         # force saving alsa conf (this will create asound.state if needed)
         self.alsa.save()
 
-        self.logger.debug('Driver enabled')
+        self.logger.debug("Driver enabled")
         return True
 
     def disable(self, params=None):
@@ -150,12 +166,12 @@ class Bcm2835AudioDriver(AudioDriver):
         Args:
             params (dict): additional parameters
         """
-        self.logger.debug('Delete /etc/asound.conf and /var/lib/alsa/asound.state')
+        self.logger.debug("Delete /etc/asound.conf and /var/lib/alsa/asound.state")
         if not self.asoundconf.delete():
-            self.logger.error('Unable to delete asound.conf file')
+            self.logger.error("Unable to delete asound.conf file")
             return False
 
-        self.logger.debug('Driver disabled')
+        self.logger.debug("Driver disabled")
         return True
 
     def is_enabled(self):
@@ -176,10 +192,10 @@ class Bcm2835AudioDriver(AudioDriver):
         """
         # search for appropriate volume control
         controls = self.alsa.get_simple_controls()
-        self.volume_control = controls[0] if len(controls) > 0 else ''
+        self.volume_control = controls[0] if len(controls) > 0 else ""
 
         # get volume control numid
-        self.volume_control_numid = self.get_control_numid('Volume')
+        self.volume_control_numid = self.get_control_numid("Volume")
 
     def get_volumes(self):
         """
@@ -195,8 +211,8 @@ class Bcm2835AudioDriver(AudioDriver):
 
         """
         return {
-            'playback': self.alsa.get_volume(self.volume_control, self.VOLUME_PATTERN),
-            'capture': None
+            "playback": self.alsa.get_volume(self.volume_control, self.VOLUME_PATTERN),
+            "capture": None,
         }
 
     def set_volumes(self, playback=None, capture=None):
@@ -217,8 +233,10 @@ class Bcm2835AudioDriver(AudioDriver):
 
         """
         return {
-            'playback': self.alsa.set_volume(self.volume_control, self.VOLUME_PATTERN, playback),
-            'capture': None
+            "playback": self.alsa.set_volume(
+                self.volume_control, self.VOLUME_PATTERN, playback
+            ),
+            "capture": None,
         }
 
     def require_reboot(self):
@@ -229,4 +247,3 @@ class Bcm2835AudioDriver(AudioDriver):
             bool: True if reboot required
         """
         return False
-

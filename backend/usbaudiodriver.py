@@ -74,7 +74,7 @@ class UsbAudioDriver(AudioDriver):
         # install pulseaudio debian package
         resp = self.console.command('apt update -qq && apt install -q --yes pulseaudio', timeout=300)
         if resp["returncode"] != 0:
-            self.logger.error('Unable to install USB audio: %s', resp["stderr"])
+            self.logger.error('Unable to install USB audio: %s', resp)
             return False
 
         # installing native audio device consists of enabling dtparam audio in /boot/config.txt
@@ -91,8 +91,8 @@ class UsbAudioDriver(AudioDriver):
             params (dict): additional parameters
         """
         resp = self.console.command('apt purge --q --yes pulseaudio')
-        if resp["error"] != 0:
-            self.logger.error('Unable to uninstall USB audio: %s', error["stderr"])
+        if resp["returncode"] != 0:
+            self.logger.error('Unable to uninstall USB audio: %s', resp)
         return True
 
     def is_installed(self):

@@ -6,6 +6,7 @@
 - Update app and bcm driver after core changes on audiodriver
 - Improvement to avoid app crash while loading invalid driver
 - Restart Cleep after new audio device has been selected (this allow reset Gstreamer context)
+- Improve code coverage
 
 ### Added
 * Add USB driver to handle USB audio hardware

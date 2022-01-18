@@ -100,6 +100,8 @@ class UsbAudioDriver(AudioDriver):
         resp = self.console.command("apt purge --q --yes pulseaudio")
         if resp["returncode"] != 0:
             self.logger.error("Unable to uninstall USB audio: %s", resp)
+            raise Exception('Unable to uninstall USB audio')
+
         return True
 
     def is_installed(self):

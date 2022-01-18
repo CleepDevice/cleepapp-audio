@@ -55,7 +55,7 @@ class Bcm2835AudioDriver(AudioDriver):
         """
         pattern = re.compile("bcm2835", re.IGNORECASE)
         for device_name in devices_names:
-            if pattern.match(device_name["device_name"]):
+            if pattern.match(device_name["device_desc"]):
                 return device_name["card_name"]
 
         return None
@@ -190,11 +190,9 @@ class Bcm2835AudioDriver(AudioDriver):
         """
         Set controls used to configure volumes
         """
-        # search for appropriate volume control
         controls = self.alsa.get_simple_controls()
         self.volume_control = controls[0] if len(controls) > 0 else ""
 
-        # get volume control numid
         self.volume_control_numid = self.get_control_numid("Volume")
 
     def get_volumes(self):

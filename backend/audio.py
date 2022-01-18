@@ -158,8 +158,8 @@ class Audio(CleepResources):
                 if device["enabled"] and device["installed"]:
                     volumes = driver.get_volumes()
             except Exception as error:
-                self.logger.debug(
-                    'Driver "%s" disabled due to error: %s', driver_name, str(error)
+                self.logger.exception(
+                    'Audio driver "%s" disabled due to error: %s', driver_name, str(error)
                 )
 
         return {
@@ -222,14 +222,14 @@ class Audio(CleepResources):
                 'Disable previous driver "%s": %s', old_driver.name, disabled
             )
             if not disabled:
-                raise CommandError("Unable to disable current device")
+                raise CommandError("Unable to disable current driver")
 
         # enable new driver
         self.logger.debug('Enable new driver "%s"', new_driver.name)
         driver_enabled = new_driver.enable()
         if not driver_enabled or not new_driver.is_card_enabled():
-            self.logger.debug(
-                "Unable to enable new driver. Revert re-enabling old driver"
+            self.logger.info(
+                "Unable to enable selected driver. Revert re-enabling previous driver"
             )
             if old_driver:
                 old_driver.enable()

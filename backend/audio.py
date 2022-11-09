@@ -37,7 +37,7 @@ class Audio(CleepResources):
     MODULE_CONFIG_FILE = "audio.conf"
     DEFAULT_CONFIG = {"driver": None}
 
-    TEST_SOUND = "/opt/cleep/sounds/connected.wav"
+    TEST_SOUND = "connected.wav"
 
     MODULE_RESOURCES = {
         "audio.playback": {
@@ -158,7 +158,7 @@ class Audio(CleepResources):
                 if device["enabled"] and device["installed"]:
                     volumes = driver.get_volumes()
             except Exception as error:
-                self.logger.exception(
+                self.logger.info(
                     'Audio driver "%s" disabled due to error: %s', driver_name, str(error)
                 )
 
@@ -337,7 +337,8 @@ class Audio(CleepResources):
         self.logger.debug('Resource "%s" acquired', resource_name)
         if resource_name == "audio.playback":
             # play test sample
-            if not self.alsa.play_sound(self.TEST_SOUND):
+            audio_path = os.path.join(self.APP_ASSET_PATH, self.TEST_SOUND)
+            if not self.alsa.play_sound(audio_path):
                 raise CommandError("Unable to play test sound: internal error")
 
             # release resource

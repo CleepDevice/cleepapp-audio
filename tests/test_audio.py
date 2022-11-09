@@ -10,15 +10,12 @@ from cleep.libs.tests import session, lib
 import os
 import time
 from mock import Mock, MagicMock, patch
-from cleep.libs.tests.common import get_log_level
-
-LOG_LEVEL = get_log_level()
 
 class TestAudio(unittest.TestCase):
 
     def setUp(self):
         self.session = session.TestSession(self)
-        logging.basicConfig(level=LOG_LEVEL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=logging.FATAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
 
     def tearDown(self):
         self.session.clean()

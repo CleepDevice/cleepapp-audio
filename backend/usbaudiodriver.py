@@ -119,7 +119,8 @@ class UsbAudioDriver(AudioDriver):
         Enable driver
         """
         if not self.get_card_name():
-            raise Exception("No USB audio found. Please connect it before enabling it")
+            self.logger.error("No USB audio found. Please connect device before enabling it")
+            return False
 
         # as the default driver and just in case, delete existing config
         self.asoundconf.delete()

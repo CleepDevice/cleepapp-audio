@@ -1,10 +1,10 @@
 # Changelog
 
 ## [x.x.x]
-
 ### Fixed
 - Change log level from error to info when audio driver can't be loaded at startup (surely no hardware)
 - Move default sound files from core in brand new assets directory
+- #1386 error installing "usb audio driver" issue
 
 ## [2.1.0] - 2022-01-16
 

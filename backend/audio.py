@@ -107,7 +107,7 @@ class Audio(CleepResources):
 
         # enable driver if possible
         if not driver:
-            self.logger.info("No audio driver found while it should")
+            self.logger.info("No audio driver found while it should be")
             return
         if not driver.is_installed():
             self.logger.error(
@@ -158,9 +158,11 @@ class Audio(CleepResources):
                 if device["enabled"] and device["installed"]:
                     volumes = driver.get_volumes()
             except Exception as error:
-                self.logger.info(
+                # problem with driver, unregister it
+                self.logger.warn(
                     'Audio driver "%s" disabled due to error: %s', driver_name, str(error)
                 )
+                self.drivers.unregister(driver)
 
         return {
             "devices": {

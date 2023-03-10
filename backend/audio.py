@@ -159,8 +159,10 @@ class Audio(CleepResources):
                     volumes = driver.get_volumes()
             except Exception as error:
                 # problem with driver, unregister it
-                self.logger.warn(
-                    'Audio driver "%s" disabled due to error: %s', driver_name, str(error)
+                self.logger.warning(
+                    'Audio driver "%s" disabled due to error: %s',
+                    driver_name,
+                    str(error),
                 )
                 self.drivers.unregister(driver)
 

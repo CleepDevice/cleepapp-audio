@@ -100,7 +100,7 @@ class UsbAudioDriver(AudioDriver):
         resp = self.console.command("apt purge --q --yes pulseaudio")
         if resp["returncode"] != 0:
             self.logger.error("Unable to uninstall USB audio: %s", resp)
-            raise Exception('Unable to uninstall USB audio')
+            raise Exception("Unable to uninstall USB audio")
 
         return True
 
@@ -119,7 +119,9 @@ class UsbAudioDriver(AudioDriver):
         Enable driver
         """
         if not self.get_card_name():
-            self.logger.error("No USB audio found. Please connect device before enabling it")
+            self.logger.error(
+                "No USB audio found. Please connect device before enabling it"
+            )
             return False
 
         # as the default driver and just in case, delete existing config

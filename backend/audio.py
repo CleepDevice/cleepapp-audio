@@ -29,9 +29,9 @@ class Audio(CleepResources):
         "Application that helps you to configure audio on your device"
     )
     MODULE_TAGS = ["audio", "sound"]
-    MODULE_URLINFO = "https://github.com/tangb/cleepmod-audio"
-    MODULE_URLHELP = "https://github.com/tangb/cleepmod-audio/wiki"
-    MODULE_URLBUGS = "https://github.com/tangb/cleepmod-audio/issues"
+    MODULE_URLINFO = "https://github.com/CleepDevice/cleepapp-audio"
+    MODULE_URLHELP = "https://github.com/CleepDevice/cleepapp-audio/wiki"
+    MODULE_URLBUGS = "https://github.com/CleepDevice/cleepapp-audio/issues"
     MODULE_URLSITE = None
 
     MODULE_CONFIG_FILE = "audio.conf"

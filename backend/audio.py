@@ -21,7 +21,7 @@ class Audio(CleepResources):
     """
 
     MODULE_AUTHOR = "Cleep"
-    MODULE_VERSION = "2.1.0"
+    MODULE_VERSION = "2.1.1"
     MODULE_CATEGORY = "APPLICATION"
     MODULE_DEPS = []
     MODULE_DESCRIPTION = "Configure audio on your device"

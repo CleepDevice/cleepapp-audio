@@ -7,14 +7,14 @@ angular
 .directive('audioConfigComponent', ['$rootScope', 'toastService', 'audioService', 'cleepService',
 function($rootScope, toast, audioService, cleepService) {
 
-    var audioController = function()
-    {
+    var audioController = function() {
         var self = this;
         self.playbackDevices = [];
         self.captureDevices = [];
         self.volumePlayback = 0;
         self.volumeCapture = 0;
         self.currentDevice = null;
+        self.devices = [];
 
         /**
          * Set volumes
@@ -69,43 +69,43 @@ function($rootScope, toast, audioService, cleepService) {
                 });
         };
 
-        //set internal members according to received config
+        // set internal members according to received config
         self.setConfig = function(config) {
             self.playbackDevices = config.devices.playback;
             self.captureDevices = config.devices.capture;
             self.volumePlayback = config.volumes.playback;
             self.volumeCapture = config.volumes.capture;
 
-            //search for current device in playback devices list
-            for( var i=0; i<self.playbackDevices.length; i++ ) {
-                if( self.playbackDevices[i].enabled===true ) {
+            // search for current device in playback devices list
+            for (var i=0; i<self.playbackDevices.length; i++) {
+                if( self.playbackDevices[i].enabled === true ) {
                     self.currentDevice = self.playbackDevices[i];
                     break;
                 }
             }
+
+            const devices = [];
+            for (const device of config.devices.playback) {
+                const installed = !device.installed ? ' (driver not installed)' : '';
+                devices.push({
+                    label: device.label + installed,
+                    value: device,
+                    disabled: !device.installed,
+                });
+            }
+            self.devices = devices;
         };
 
         /**
-         * Init component
+         * Watch for config changes
          */
-        self.$onInit = function() {
-            cleepService.getModuleConfig('audio')
-                .then(function(config) {
-                    self.setConfig(config);
-                });
-        };
-
-     	/**
-      	 * Watch for config changes
-      	 */
-     	$rootScope.$watchCollection(function() {
-        	return cleepService.modules['audio'];
-     	}, function(newConfig, oldConfig) {
-        	if( newConfig )
-         	{
-            	self.setConfig(newConfig.config);
-         	}
-     	});
+        $rootScope.$watchCollection(function() {
+            return cleepService.modules['audio'];
+        }, function(newConfig, oldConfig) {
+            if( newConfig ) {
+                self.setConfig(newConfig.config);
+            }
+        });
     };
 
     return {
@@ -113,6 +113,6 @@ function($rootScope, toast, audioService, cleepService) {
         replace: true,
         scope: true,
         controller: audioController,
-        controllerAs: 'audioCtl',
+        controllerAs: '$ctrl',
     };
 }]);

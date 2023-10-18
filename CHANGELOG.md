@@ -1,5 +1,13 @@
 # Changelog
 
+## [UNRELEASED]
+
+### Fixed
+- Documentation
+
+### Updated
+- Use Cleep config components
+
 ## [2.1.1] - 2023-03-10
 
 ### Fixed

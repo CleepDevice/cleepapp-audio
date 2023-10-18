@@ -257,12 +257,12 @@ class Audio(CleepResources):
             dict: current volume::
 
                 {
-                    playback (int)
-                    capture (int)
+                    playback (int): playback volume
+                    capture (int): capture volume
                 }
 
         Raises:
-            InvalidParameters if parameter is invalid
+            InvalidParameter: if parameter is invalid
         """
         self._check_parameters(
             [

@@ -16,7 +16,7 @@ from cleep.libs.tests import session, lib
 from cleep.libs.tests.common import get_log_level
 import os
 import time
-from mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, patch
 
 LOG_LEVEL = get_log_level()
 
@@ -39,7 +39,7 @@ class TestAudio(unittest.TestCase):
             cleep_filesystem.open.return_value.read.return_value = "dtparam=audio=on"
             bootstrap["cleep_filesystem"] = cleep_filesystem
 
-        self.module = self.session.setup(Audio, bootstrap=bootstrap)
+        self.module = self.session.setup(Audio, bootstrap=bootstrap, mock_on_start=False, mock_on_stop=False)
         mock_command = self.session.make_mock_command("restart_cleep")
         self.session.add_mock_command(mock_command)
         self.session.start_module(self.module)

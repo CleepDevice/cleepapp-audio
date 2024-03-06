@@ -14,7 +14,7 @@ from cleep.libs.tests import session, lib
 from cleep.libs.tests.common import get_log_level
 import os
 import time
-from mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, patch
 
 LOG_LEVEL = get_log_level()
 

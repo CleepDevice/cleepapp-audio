@@ -1,3 +1,4 @@
+from cleep.libs.tests import session, lib
 import unittest
 import logging
 import sys
@@ -12,7 +13,6 @@ from cleep.exception import (
     CommandError,
     Unauthorized,
 )
-from cleep.libs.tests import session, lib
 from cleep.libs.tests.common import get_log_level
 import os
 import time
@@ -451,5 +451,5 @@ class TestAudio(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # coverage run --omit="*lib/python*/*","test_*" --concurrency=thread test_audio.py; coverage report -m -i
+    # coverage run --include="**/backend/**/*.py" --concurrency=thread test_audio.py; coverage report -m -i
     unittest.main()

@@ -97,7 +97,32 @@ class TestAudio(unittest.TestCase):
         )
 
     def test_get_module_config(self):
-        self.init_session()
+        # App CI is non-privileged (no /dev/snd). Mock drivers instead of relying
+        # on host ALSA — same pattern as test_get_module_config_error_loading_driver.
+        bcm_driver = Mock()
+        bcm_driver.get_card_name.return_value = "bcm2835"
+        bcm_driver.get_device_infos.return_value = {
+            "playback": True,
+            "capture": False,
+            "deviceid": 0,
+            "cardid": 0,
+            "cardname": "bcm2835",
+        }
+        bcm_driver.is_enabled.return_value = True
+        bcm_driver.is_installed.return_value = True
+        bcm_driver.get_volumes.return_value = {"playback": 80, "capture": None}
+
+        drivers_mock = Mock()
+        drivers_mock.get_drivers.return_value = {
+            "Raspberry pi soundcard": bcm_driver,
+        }
+        drivers_mock.get_driver.return_value = bcm_driver
+        self.init_session(
+            bootstrap={
+                "drivers": drivers_mock,
+            }
+        )
+
         conf = self.module.get_module_config()
         logging.debug("Conf: %s" % conf)
 
@@ -111,17 +136,11 @@ class TestAudio(unittest.TestCase):
         self.assertEqual(
             conf["devices"]["playback"][0]["label"], "Raspberry pi soundcard"
         )
-        # breaks tests during CI (no audio)
-        # self.assertEqual(conf['devices']['playback'][0]['enabled'], True)
-        # self.assertEqual(conf['devices']['playback'][0]['installed'], True)
-        # self.assertEqual(conf['devices']['playback'][0]['device']['deviceid'], 0)
-        # self.assertEqual(conf['devices']['playback'][0]['device']['playback'], True)
-        # self.assertTrue(conf['devices']['playback'][0]['device']['cardname'].startswith('bcm2835'))
-        # self.assertEqual(conf['devices']['playback'][0]['device']['capture'], False)
-        # self.assertEqual(conf['devices']['playback'][0]['device']['cardid'], 0)
-
-        # self.assertTrue(isinstance(conf['volumes']['playback'], int))
-        # self.assertIsNone(conf['volumes']['capture'])
+        self.assertEqual(conf["devices"]["playback"][0]["name"], "bcm2835")
+        self.assertEqual(conf["devices"]["playback"][0]["enabled"], True)
+        self.assertEqual(conf["devices"]["playback"][0]["installed"], True)
+        self.assertEqual(conf["volumes"]["playback"], 80)
+        self.assertIsNone(conf["volumes"]["capture"])
 
     def test_get_module_config_error_loading_driver(self):
         bad_driver = Mock()

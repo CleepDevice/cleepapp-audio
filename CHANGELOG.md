@@ -1,9 +1,14 @@
 # Changelog
 
-## [2.2.1]
+## [2.2.1] - 2026-09-25
 
 ### Fixed
 - Repair unit test after security hardening
+
+## [2.2.0] - 2024-09-30
+
+### Fixed
+- Tests
 
 ## [2.1.1] - 2023-03-10
 

@@ -1,12 +1,9 @@
 # Changelog
 
-## [UNRELEASED]
+## [2.2.1]
 
 ### Fixed
-- Documentation
-
-### Updated
-- Use Cleep config components
+- Repair unit test after security hardening
 
 ## [2.1.1] - 2023-03-10
 

@@ -73,14 +73,20 @@ class Audio(CleepResources):
         """
         Module configuration
         """
+        try:
+            board_audio = Tools.raspberry_pi_infos().get("audio", False)
+        except Exception:
+            self.logger.exception("Unable to read raspberry pi infos")
+            board_audio = False
+
         # restore selected soundcard
         selected_driver_name = self._get_config_field("driver")
         self.logger.trace(
             "selected_driver_name=%s audio supported=%s",
             selected_driver_name,
-            Tools.raspberry_pi_infos()["audio"],
+            board_audio,
         )
-        if not selected_driver_name and Tools.raspberry_pi_infos()["audio"]:
+        if not selected_driver_name and board_audio:
             # set default sound driver to raspberry pi embedded one
             self.logger.trace("Set default sound driver")
             selected_driver_name = self.bcm2835_driver.name
@@ -96,7 +102,7 @@ class Audio(CleepResources):
         driver = self.drivers.get_driver(Driver.DRIVER_AUDIO, selected_driver_name)
 
         # fallback to default driver if necessary (and possible)
-        if not driver and Tools.raspberry_pi_infos()["audio"]:
+        if not driver and board_audio:
             self.logger.warning(
                 "Configured audio driver is not loaded, fallback to default one."
             )
@@ -105,7 +111,7 @@ class Audio(CleepResources):
                 Driver.DRIVER_AUDIO, self.bcm2835_driver.name
             )
 
-        # enable driver if possible
+        # enable driver if possible (readiness for apps that need audio after join)
         if not driver:
             self.logger.info("No audio driver found while it should be")
             return

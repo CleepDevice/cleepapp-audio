@@ -1,9 +1,12 @@
 # Changelog
 
-## [2.2.1] - 2026-09-25
+## [Unreleased]
 
 ### Fixed
 - Repair unit test after security hardening
+
+### Changed
+- Call `raspberry_pi_infos()` once during `_configure` (was probed three times)
 
 ## [2.2.0] - 2024-09-30
 

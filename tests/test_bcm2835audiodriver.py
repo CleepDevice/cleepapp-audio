@@ -1,8 +1,6 @@
 import unittest
 import logging
-import sys
 
-sys.path.append("../")
 from backend.bcm2835audiodriver import Bcm2835AudioDriver
 from cleep.exception import (
     InvalidParameter,

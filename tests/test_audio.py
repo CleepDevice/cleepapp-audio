@@ -1,9 +1,7 @@
 from cleep.libs.tests import session, lib
 import unittest
 import logging
-import sys
 
-sys.path.append("../")
 from backend.audio import Audio
 from backend.bcm2835audiodriver import Bcm2835AudioDriver
 from backend.usbaudiodriver import UsbAudioDriver

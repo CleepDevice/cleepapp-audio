@@ -1,8 +1,6 @@
 import unittest
 import logging
-import sys
 
-sys.path.append("../")
 from backend.usbaudiodriver import UsbAudioDriver
 from cleep.exception import (
     InvalidParameter,
